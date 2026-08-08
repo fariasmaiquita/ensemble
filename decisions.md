@@ -171,6 +171,69 @@ The tokens are where the design lives; Tailwind is only the delivery mechanism.
 
 ---
 
+## 11. Editorial and light, not dark and cinematic
+
+**2026-08-08.** A repertory cinema programme or a film reference book: warm paper ground,
+Newsreader carrying titles, Archivo carrying metadata, one spot colour, generous whitespace.
+
+**Rejected: dark cinematic** — near-black ground, poster-forward, gradient scrims over hero
+art. It is a genuinely good option. TMDB's artwork looks superb on black for no effort, and
+it is instantly legible to anyone who has used a streaming service.
+
+**It was rejected because that familiarity is the problem, in two ways.**
+
+First, it is what the entire category already does, so it demonstrates no judgement. Against
+someone who has seen many of these, "the same, slightly nicer" is not an argument.
+
+Second and more importantly, **the tile grid fights the thesis.** A wall of posters says
+*browse content*. Every item becomes an interchangeable rectangle, and structure — which
+film precedes which, which face recurs, which series stopped — becomes invisible. An app
+whose whole claim is about connections cannot use the layout that flattens them.
+
+**Known risk, accepted:** light editorial is harder to make feel media-native, and posters on
+warm white can read clinical if the spacing is wrong. Mitigated by treating images as plates
+with a rule around them rather than as bleed-to-edge tiles.
+
+---
+
+## 12. Light only, no dark mode
+
+**2026-08-08.** No `prefers-color-scheme` branch. The scaffold's dark-mode block was removed
+rather than extended.
+
+**Rejected: shipping both.** Dark mode is expected of a modern app, and its absence can read
+as unfinished.
+
+Rejected anyway because the direction in #11 is *specifically* a paper ground — a printed
+programme has no dark variant, and a dark Ensemble would be a different design rather than
+the same design inverted. Doing it properly means designing twice; doing it cheaply means
+an automatic inversion that would undermine the one thing the visual design is meant to
+prove.
+
+**Revisit if** the piece reads as incomplete to a reviewer. Roughly an hour of work, and the
+token layer is structured so it would be a second set of values rather than a rewrite.
+
+---
+
+## 13. Search results are a catalogue, not a grid
+
+**2026-08-08.** Results render as a ruled vertical list — plate, title, category, year,
+two lines of synopsis — rather than as a poster grid.
+
+**Rejected: the poster grid**, which is the category default and fits more results per
+screen.
+
+The list won because it shows *more per item* rather than more items: category, year and
+synopsis are all visible without a hover or a tap, which is what makes the thing feel like a
+reference tool instead of a storefront. It also scales down to narrow screens without a
+breakpoint, since a single column is already the layout.
+
+**The honest tradeoff:** scanning twenty results takes more scrolling than a grid would. For
+a tool where you usually know what you are looking for, that is the right side of the trade —
+but it would be the wrong one for a browse-first product.
+
+---
+
 ## 10. Deliberately ugly until the design block
 
 **2026-08-08.** The scaffold's search page uses unstyled defaults on purpose. Design
