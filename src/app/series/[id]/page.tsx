@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { tmdb, posterUrl, TmdbError } from "@/lib/tmdb";
 import {
+  type Credits,
   type SeriesStanding,
   type TvDetail,
   parseId,
@@ -11,13 +12,19 @@ import {
 } from "@/lib/types";
 import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
+import { CastList } from "@/components/cast-list";
 
-async function getSeries(param: string): Promise<TvDetail> {
+interface SeriesWithCredits extends TvDetail {
+  credits: Credits;
+}
+
+async function getSeries(param: string): Promise<SeriesWithCredits> {
   const id = parseId(param);
   if (id === null) notFound();
 
   try {
-    return await tmdb<TvDetail>(`/tv/${id}`);
+    // One request rather than two: TMDB will inline a sub-resource on the detail response.
+    return await tmdb<SeriesWithCredits>(`/tv/${id}`, { append_to_response: "credits" });
   } catch (error) {
     if (error instanceof TmdbError && error.status === 404) notFound();
     throw error;
@@ -140,6 +147,8 @@ export default async function SeriesPage({ params }: PageProps<"/series/[id]">) 
             ) : null}
           </div>
         </div>
+
+        <CastList cast={series.credits?.cast ?? []} />
       </article>
     </div>
   );

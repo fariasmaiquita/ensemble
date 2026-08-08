@@ -1,16 +1,22 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { tmdb, posterUrl, TmdbError } from "@/lib/tmdb";
-import { type MovieDetail, formatRuntime, parseId, year } from "@/lib/types";
+import { type Credits, type MovieDetail, formatRuntime, parseId, year } from "@/lib/types";
 import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
+import { CastList } from "@/components/cast-list";
 
-async function getFilm(param: string): Promise<MovieDetail> {
+interface FilmWithCredits extends MovieDetail {
+  credits: Credits;
+}
+
+async function getFilm(param: string): Promise<FilmWithCredits> {
   const id = parseId(param);
   if (id === null) notFound();
 
   try {
-    return await tmdb<MovieDetail>(`/movie/${id}`);
+    // One request rather than two: TMDB will inline a sub-resource on the detail response.
+    return await tmdb<FilmWithCredits>(`/movie/${id}`, { append_to_response: "credits" });
   } catch (error) {
     if (error instanceof TmdbError && error.status === 404) notFound();
     throw error;
@@ -88,6 +94,8 @@ export default async function FilmPage({ params }: PageProps<"/film/[id]">) {
             Part of {film.belongs_to_collection.name}
           </p>
         ) : null}
+
+        <CastList cast={film.credits?.cast ?? []} />
       </article>
     </div>
   );
