@@ -1,12 +1,7 @@
-import Image from "next/image";
-import { tmdb, posterUrl, profileUrl, TmdbError } from "@/lib/tmdb";
-import {
-  type MultiSearchResult,
-  type Paginated,
-  displayTitle,
-  isPerson,
-  releaseYear,
-} from "@/lib/types";
+import { tmdb, TmdbError } from "@/lib/tmdb";
+import type { MultiSearchResult, Paginated } from "@/lib/types";
+import { Masthead, SearchField } from "@/components/masthead";
+import { ResultRow } from "@/components/result-row";
 
 /**
  * Search state lives in the URL rather than in component state — see decisions.md #5.
@@ -19,42 +14,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     <div className="mx-auto w-full max-w-3xl px-6 pb-24 sm:px-8">
       <Masthead />
       <SearchField query={query} />
-      {query ? <Results query={query} /> : <EmptyState />}
+      {query ? <Results query={query} /> : <Premise />}
     </div>
   );
 }
 
-function Masthead() {
-  return (
-    <header className="border-rule border-b pt-16 pb-6">
-      <h1 className="editorial text-display text-ink">Ensemble</h1>
-      <p className="label text-ink-muted mt-3">
-        Films &amp; television, by what connects them
-      </p>
-    </header>
-  );
-}
-
-function SearchField({ query }: { query: string }) {
-  return (
-    <form className="border-rule flex items-baseline gap-4 border-b py-5">
-      <label htmlFor="q" className="label text-ink-faint shrink-0">
-        Search
-      </label>
-      <input
-        id="q"
-        type="search"
-        name="q"
-        defaultValue={query}
-        placeholder="A film, a series, a person…"
-        autoComplete="off"
-        className="text-subtitle editorial text-ink placeholder:text-ink-faint w-full bg-transparent outline-none placeholder:italic"
-      />
-    </form>
-  );
-}
-
-function EmptyState() {
+function Premise() {
   return (
     <p className="text-body text-ink-muted max-w-md pt-10 italic">
       Every film in a franchise in one place. The faces that recur across what you love.
@@ -105,49 +70,5 @@ async function Results({ query }: { query: string }) {
         ))}
       </ul>
     </section>
-  );
-}
-
-function ResultRow({ result }: { result: MultiSearchResult }) {
-  const person = isPerson(result);
-  const image = person ? profileUrl(result.profile_path) : posterUrl(result.poster_path);
-  const year = releaseYear(result);
-  const category = person ? "Person" : result.media_type === "movie" ? "Film" : "Series";
-
-  return (
-    <li className="flex gap-5 py-6">
-      <Plate src={image} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="editorial text-title text-ink truncate">{displayTitle(result)}</h2>
-          {year ? (
-            <span className="label text-ink-faint shrink-0 tabular-nums">{year}</span>
-          ) : null}
-        </div>
-
-        <p className="label text-ink-muted mt-1.5">
-          {category}
-          {person && result.known_for_department ? ` · ${result.known_for_department}` : ""}
-        </p>
-
-        {!person && result.overview ? (
-          <p className="text-meta text-ink-muted mt-2.5 line-clamp-2">{result.overview}</p>
-        ) : null}
-      </div>
-    </li>
-  );
-}
-
-/**
- * A poster or profile image, treated as a plate in a book: fixed, ruled, and captioned
- * by the text beside it — rather than as a tile in a grid.
- */
-function Plate({ src }: { src: string | null }) {
-  return (
-    <div className="border-rule bg-paper-sunk relative aspect-[2/3] w-20 shrink-0 overflow-hidden border">
-      {src ? (
-        <Image src={src} alt="" fill sizes="80px" className="object-cover" />
-      ) : null}
-    </div>
   );
 }
