@@ -29,7 +29,7 @@ function Masthead() {
     <header className="border-rule border-b pt-16 pb-6">
       <h1 className="editorial text-display text-ink">Ensemble</h1>
       <p className="label text-ink-muted mt-3">
-        Films &amp; television — by what connects them
+        Films &amp; television, by what connects them
       </p>
     </header>
   );
