@@ -196,22 +196,26 @@ with a rule around them rather than as bleed-to-edge tiles.
 
 ---
 
-## 12. Light only, no dark mode
+## 12. Light first, dark deferred to last
 
-**2026-08-08.** No `prefers-color-scheme` branch. The scaffold's dark-mode block was removed
-rather than extended.
+**2026-08-08.** No `prefers-color-scheme` branch for now. The scaffold's dark-mode block was
+removed rather than extended.
 
-**Rejected: shipping both.** Dark mode is expected of a modern app, and its absence can read
-as unfinished.
+**Rejected: designing both at once.** The direction in #11 is *specifically* a paper ground,
+and a printed programme has no dark variant — so a dark Ensemble is a **second design**, not
+this one inverted. Building both in parallel means every token decision gets litigated twice
+before either is settled, and the cheap escape (an automatic inversion) would undermine the
+one thing the visual design exists to prove.
 
-Rejected anyway because the direction in #11 is *specifically* a paper ground — a printed
-programme has no dark variant, and a dark Ensemble would be a different design rather than
-the same design inverted. Doing it properly means designing twice; doing it cheaply means
-an automatic inversion that would undermine the one thing the visual design is meant to
-prove.
+**Also rejected: cutting it entirely**, which was the original call. Overruled by the person
+who will actually use this every day and reads everything in dark mode. That is the right
+reason to overrule it — the app has a real user with a real preference, and designing against
+that to protect a purist argument about paper would be precious.
 
-**Revisit if** the piece reads as incomplete to a reviewer. Roughly an hour of work, and the
-token layer is structured so it would be a second set of values rather than a rewrite.
+**So: scheduled, not parked.** Dark mode ships as one of the last pieces before launch, once
+the light design has stopped moving and there is a fixed thing to translate rather than a
+moving one. Roughly an hour; the token layer is built so it is a second set of values, not a
+rewrite.
 
 ---
 
