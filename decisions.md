@@ -171,6 +171,49 @@ The tokens are where the design lives; Tailwind is only the delivery mechanism.
 
 ---
 
+## 14. URLs use the product's vocabulary, not the API's
+
+**2026-08-08.** Routes are `/film/348-alien` and `/series/1437-firefly`.
+
+**Rejected: `/movie/348` and `/tv/1437`**, which is what TMDB calls them and would have meant
+one less translation layer.
+
+The interface says *Film* and *Series* everywhere a category is shown, and a URL is part of
+the interface — it is the one piece of an app people copy, paste and read aloud. Matching the
+address bar to the product's own words rather than a vendor's internal naming costs one
+mapping function and keeps the whole surface speaking one language.
+
+**The slug is cosmetic and deliberately so.** The id is parsed off the front, so
+`/film/348-alien`, `/film/348` and a stale `/film/348-old-title` all resolve to the same
+page. A link that has been sitting in someone's notes for a year should not break because a
+title was edited upstream.
+
+---
+
+## 15. "Ended" and "Cancelled" are different words, and the difference is the product
+
+**2026-08-08.** TMDB reports series status as `Ended`, `Canceled`, `Returning Series`,
+`Planned`, `In Production` or `Pilot`. Ensemble maps those to four standings and gives each
+a different typographic weight:
+
+- **Cancelled** takes the spot colour. It is a warning: the story was cut off.
+- **Still running** takes the green. It is an invitation, and also a caution about waiting.
+- **Ended** is deliberately *quiet*, in muted ink. "It finished properly" is reassurance, and
+  reassurance does not need to shout.
+
+**Rejected: one neutral status chip** showing whatever string TMDB returned. That is what
+most trackers do when they show status at all, and it flattens the only distinction that
+actually changes a decision. *Ended* and *Cancelled* are three letters apart in a database
+and worlds apart to someone deciding whether to commit thirty hours.
+
+**Verified against real data:** Firefly renders `Series · 2002 · 1 season · 11 episodes ·
+CANCELLED` in rust; Breaking Bad renders `2008–2013 · 5 seasons · 62 episodes · ENDED` in
+muted ink; Law & Order: SVU renders `1999– · 28 seasons · 595 episodes · STILL RUNNING` in
+green. The open-ended range for running series and the single year for a show that lasted one
+year both fall out of the same formatter.
+
+---
+
 ## 11. Editorial and light, not dark and cinematic
 
 **2026-08-08.** A repertory cinema programme or a film reference book: warm paper ground,
