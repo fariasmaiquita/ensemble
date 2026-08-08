@@ -1,15 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Newsreader, Archivo } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Newsreader carries titles and editorial text; Archivo carries UI and metadata.
+ *
+ * Both are loaded through next/font, which downloads and self-hosts the files at build
+ * time — the browser makes zero requests to Google, so there are no third-party cookies
+ * and no consent banner for an app that otherwise sets nothing.
+ */
+const serif = Newsreader({
+  variable: "--font-serif",
   subsets: ["latin"],
+  style: ["normal", "italic"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sans = Archivo({
+  variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -22,9 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${serif.variable} ${sans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="bg-paper text-ink font-sans text-body min-h-full">{children}</body>
     </html>
   );
 }
