@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ensemble
 
-## Getting Started
+A film and television tracker built around the **connections** between what you watch —
+which films share a franchise, which faces keep recurring across the things you love, and
+whether a series you are about to start was cancelled years ago on a cliffhanger.
 
-First, run the development server:
+Watchlists are a solved problem. This is not trying to be a better one.
+
+> **Status: in progress.** Being built in the open, design and engineering by the same
+> person. `decisions.md` records what was chosen and what was rejected, written as the
+> decisions were made rather than reconstructed afterwards.
+
+## Running it locally
+
+Requires Node 22+ and a free [TMDB](https://www.themoviedb.org/) account.
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Add your **API Read Access Token (v4 auth)** from
+[TMDB's API settings](https://www.themoviedb.org/settings/api) to `.env.local`, then:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The token is read only on the server. `src/lib/tmdb.ts` imports `server-only`, so the build
+fails rather than leaking it into a client bundle if that module is ever imported from a
+client component.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · deployed on Vercel.
 
-## Learn More
+No accounts, no backend, no database — watch state lives in `localStorage`, and moves
+between browsers as an exported file.
 
-To learn more about Next.js, take a look at the following resources:
+## Attribution
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This product uses the TMDB API but is not endorsed or certified by TMDB.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Data and images courtesy of [The Movie Database](https://www.themoviedb.org/). Used under
+TMDB's [terms of use](https://www.themoviedb.org/api-terms-of-use) for non-commercial
+projects.
