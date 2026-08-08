@@ -223,3 +223,141 @@ export function mediaHref(r: MultiSearchResult): string {
   if (isTv(r)) return `/series/${r.id}-${slug}`;
   return `/person/${r.id}-${slug}`;
 }
+
+export function personHref(id: number, name: string): string {
+  return `/person/${id}-${slugify(name)}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/* People and credits                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+}
+
+export interface CrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string | null;
+}
+
+export interface Credits {
+  cast: CastMember[];
+  crew: CrewMember[];
+}
+
+export interface PersonDetail {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+}
+
+/** One entry in a person's filmography. TMDB mixes films and series in the same array. */
+export interface CreditItem {
+  id: number;
+  media_type: "movie" | "tv";
+  title?: string;
+  name?: string;
+  character?: string;
+  release_date?: string;
+  first_air_date?: string;
+  poster_path: string | null;
+  vote_count: number;
+  episode_count?: number;
+}
+
+export interface CombinedCredits {
+  cast: CreditItem[];
+  crew: (CreditItem & { job?: string })[];
+}
+
+export function creditTitle(c: CreditItem): string {
+  return c.title ?? c.name ?? "Untitled";
+}
+
+export function creditYear(c: CreditItem): string | null {
+  return year(c.media_type === "movie" ? c.release_date : c.first_air_date);
+}
+
+export function creditHref(c: CreditItem): string {
+  const slug = slugify(creditTitle(c));
+  return c.media_type === "movie" ? `/film/${c.id}-${slug}` : `/series/${c.id}-${slug}`;
+}
+
+function creditDate(c: CreditItem): string | undefined {
+  return c.media_type === "movie" ? c.release_date : c.first_air_date;
+}
+
+export interface Filmography {
+  /** Work that exists, newest first. */
+  released: CreditItem[];
+  /** Announced but not out yet, soonest first. */
+  upcoming: CreditItem[];
+}
+
+/**
+ * TMDB returns the same title more than once when someone played several roles in it, and
+ * mixes announced-but-unreleased projects into the same array as finished work.
+ *
+ * **Released and upcoming are separated, and released comes first.** A straight
+ * reverse-chronological list is honest but useless: Scarlett Johansson's page opened on five
+ * films that do not exist yet, pushing everything she is actually known for below the fold.
+ * Rendering a 2028 announcement identically to a 1994 film also quietly implies it exists.
+ *
+ * Undated credits stay at the end of *released* rather than being treated as upcoming — an
+ * undated credit is unknown, not forthcoming — and are ordered by how many people have
+ * rated them, since that is the only signal available for them.
+ */
+export function tidyFilmography(credits: CreditItem[]): Filmography {
+  const seen = new Map<string, CreditItem>();
+
+  for (const credit of credits) {
+    const key = `${credit.media_type}-${credit.id}`;
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, credit);
+    } else if ((credit.character?.length ?? 0) > (existing.character?.length ?? 0)) {
+      // Keep the more descriptive of two duplicate rows.
+      seen.set(key, credit);
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const all = [...seen.values()];
+
+  const upcoming = all.filter((c) => {
+    const date = creditDate(c);
+    return Boolean(date) && date! > today;
+  });
+  const dated = all.filter((c) => {
+    const date = creditDate(c);
+    return Boolean(date) && date! <= today;
+  });
+  const undated = all.filter((c) => !creditDate(c));
+
+  dated.sort((a, b) => (creditDate(b) ?? "").localeCompare(creditDate(a) ?? ""));
+  upcoming.sort((a, b) => (creditDate(a) ?? "").localeCompare(creditDate(b) ?? ""));
+  undated.sort((a, b) => b.vote_count - a.vote_count);
+
+  return { released: [...dated, ...undated], upcoming };
+}
+
+export function lifespan(person: PersonDetail): string | null {
+  const born = year(person.birthday);
+  const died = year(person.deathday);
+  if (born && died) return `${born}–${died}`;
+  if (born) return `b. ${born}`;
+  return null;
+}

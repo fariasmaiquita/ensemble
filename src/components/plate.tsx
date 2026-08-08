@@ -12,7 +12,7 @@ export function Plate({
 }: {
   src: string | null;
   alt?: string;
-  size?: "row" | "detail";
+  size?: "mini" | "row" | "detail";
   /**
    * Set on a detail page's poster. It is the largest thing above the fold, so it is the
    * LCP element — leaving it lazy makes the browser discover it late and pop it in after
@@ -20,8 +20,8 @@ export function Plate({
    */
   priority?: boolean;
 }) {
-  const width = size === "detail" ? "w-40 sm:w-52" : "w-20";
-  const sizes = size === "detail" ? "208px" : "80px";
+  const width = size === "detail" ? "w-40 sm:w-52" : size === "mini" ? "w-11" : "w-20";
+  const sizes = size === "detail" ? "208px" : size === "mini" ? "44px" : "80px";
 
   return (
     <div

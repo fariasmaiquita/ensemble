@@ -171,6 +171,61 @@ The tokens are where the design lives; Tailwind is only the delivery mechanism.
 
 ---
 
+## 16. The cast is a credit block, not an avatar carousel
+
+**2026-08-08.** Cast renders as a ruled two-column table — small plate, name, character —
+with the first twelve shown and the remainder counted ("and 94 more" on *Avengers: Endgame*).
+
+**Rejected: the horizontally scrolling row of circular avatars** that every media app uses.
+It costs two things Ensemble cannot afford: it hides most of the cast behind a gesture, and
+it drops the character name because there is no room under a circle.
+
+For an app whose argument is the connections between people and titles, the cast is not
+decoration at the bottom of a page — it is the primary content. So it gets read like a
+printed credit block, with everything visible at once.
+
+---
+
+## 17. Released and announced work are separated
+
+**2026-08-08.** A person's filmography is split: released work newest-first, then a quieter
+"Announced" section for anything dated in the future.
+
+**This was a bug I built and then found.** The first version was straight
+reverse-chronological, which is defensible and honest. Rendered against real data it opened
+Scarlett Johansson's page on *The Batman: Part II* (2028), *The Exorcist: Martyrs* (2027) and
+three more films that do not exist — pushing everything she is actually known for below the
+fold. Worse, showing a 2028 announcement in the same treatment as a 1994 film quietly implies
+it exists.
+
+**Rejected: sorting by popularity instead**, which is what most apps do and which solves the
+vapourware problem by accident. It creates a different one — a career reads as a greatest-hits
+list with no shape, and recent work disappears under whatever was most successful a decade
+ago.
+
+**Undated credits stay at the end of *released*, not in *announced*.** An undated credit is
+unknown, not forthcoming, and putting it under a heading that claims it is coming would be
+inventing information TMDB does not have.
+
+---
+
+## 18. One request per page, not two
+
+**2026-08-08.** Detail pages use TMDB's `append_to_response` to inline sub-resources — a
+film fetches its credits in the same call as its detail, and a person fetches an entire
+combined filmography in one.
+
+**Rejected: separate calls**, parallelised with `Promise.all`. That is the more obvious
+shape and reads more cleanly. It was rejected because two round trips to TMDB cost real
+latency on a server-rendered page where nothing paints until the data arrives, and because
+each extra call is another thing that can fail independently and needs its own error path.
+
+**The tension this creates, noted for later:** `append_to_response` is per-request, so it
+cannot help the common-actors feature, which needs credits for *every* favourited title.
+That one still has N requests to solve and is deferred to its own block — see #6.
+
+---
+
 ## 14. URLs use the product's vocabulary, not the API's
 
 **2026-08-08.** Routes are `/film/348-alien` and `/series/1437-firefly`.
