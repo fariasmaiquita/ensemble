@@ -152,7 +152,26 @@ simplification that makes an app feel like a demo.
 
 ---
 
-## 9. Deliberately ugly until the design block
+## 9. Tailwind, but never stock Tailwind
+
+**2026-08-08.** Styling is Tailwind 4 with a **bespoke token layer** — colour, type and
+spacing defined once as CSS custom properties that Tailwind consumes — rather than reaching
+for the framework's default scales.
+
+**Rejected: CSS Modules.** A hand-written stylesheet would have produced the same visual
+result and is arguably a purer demonstration of CSS ability. Tailwind won because it is what
+a frontend team at a product company actually uses, so the code reads as employable rather
+than as a personal preference.
+
+**Rejected more emphatically: stock Tailwind defaults.** `bg-slate-50`, `text-gray-900`, the
+default type scale — these are the visual signature of a tutorial project, and they are
+recognisable at a glance to exactly the people this project is meant to persuade. Using a
+framework is fine; letting the framework make the design decisions is the thing to avoid.
+The tokens are where the design lives; Tailwind is only the delivery mechanism.
+
+---
+
+## 10. Deliberately ugly until the design block
 
 **2026-08-08.** The scaffold's search page uses unstyled defaults on purpose. Design
 decisions get made in one dedicated pass with the whole surface in view, not accreted while
