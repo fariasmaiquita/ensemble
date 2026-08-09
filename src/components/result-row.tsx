@@ -24,7 +24,7 @@ export function ResultRow({ result }: { result: MultiSearchResult }) {
         <Plate src={image} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-4">
-            <h2 className="editorial text-title text-ink truncate">
+            <h2 className="editorial text-title text-ink text-balance">
               {displayTitle(result)}
             </h2>
             {year ? (

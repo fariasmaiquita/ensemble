@@ -171,6 +171,63 @@ The tokens are where the design lives; Tailwind is only the delivery mechanism.
 
 ---
 
+## 19. A franchise is a numbered run, in release order
+
+**2026-08-08.** `/franchise/8091-alien` lists every film in the collection as a numbered
+sequence, in the order they came out, with the number set in the spot colour.
+
+**The number is the entire point of the view.** A search result can tell you a film exists;
+only a sequence can tell you it is the third of four, and that is the thing that was missing
+from the app this replaced.
+
+**Rejected: in-universe chronology.** Some franchises have a story order that differs from
+release order — prequels, interquels, the *Star Wars* problem. In-universe order is arguably
+more useful for a first watch, and it was rejected because **TMDB does not carry it**.
+Building it would mean hand-curating an ordering per franchise, which is exactly the
+hand-maintained data this project avoids on principle: the reason franchise view is tractable
+at all is that collections are a first-class TMDB concept.
+
+**Rejected: sorting undated entries first.** An announced sequel with no release date sorts
+to the top on an empty string comparison. They go last instead — a film that does not exist
+yet is not the beginning of the run.
+
+---
+
+## 20. "Collection" is TMDB's filing word, not the franchise's name
+
+**2026-08-08.** TMDB names collections "Alien Collection", "The Lord of the Rings
+Collection". The suffix is a cataloguing convention, so it is stripped: the page reads *The
+Lord of the Rings*, and the film page links "Part of the Alien franchise".
+
+**Rejected: showing TMDB's string verbatim**, which is safer and needs no rule. It produces
+"Part of Alien Collection" — a seam that makes an app feel assembled rather than designed.
+
+**The strip is conditional, not assumed.** It only fires when the suffix is actually there,
+so a collection named anything else survives untouched instead of being mangled by a rule
+that assumed a pattern held everywhere.
+
+---
+
+## 21. Titles never truncate
+
+**2026-08-08.** Titles wrap. They previously carried `truncate`, which is the reflex for
+keeping a row tidy.
+
+**Found by looking at the franchise view, which is the worst case for it.** Every entry in a
+run shares a long prefix, so clipping the end removes the only words that distinguish them:
+*"The Lord of the Rings: The Fellowship of…"* and *"The Lord of the Rings: The Return of…"*
+are the same string until precisely the part that gets cut. A tidy row that cannot tell you
+which film it is has optimised for the wrong thing.
+
+**Rejected: shrinking the title size on franchise pages** so more fits on one line. That
+fixes the symptom in one view, leaves search results clipping the same titles, and makes the
+franchise page inconsistent with every other page for no reason a reader could infer.
+
+Verified by asserting the invariant rather than looking: `scrollWidth > clientWidth` is now
+false for every title on the page.
+
+---
+
 ## 16. The cast is a credit block, not an avatar carousel
 
 **2026-08-08.** Cast renders as a ruled two-column table — small plate, name, character —
