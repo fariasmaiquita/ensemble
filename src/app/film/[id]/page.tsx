@@ -1,7 +1,16 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { tmdb, posterUrl, TmdbError } from "@/lib/tmdb";
-import { type Credits, type MovieDetail, formatRuntime, parseId, year } from "@/lib/types";
+import {
+  type Credits,
+  type MovieDetail,
+  formatRuntime,
+  franchiseHref,
+  franchiseName,
+  parseId,
+  year,
+} from "@/lib/types";
 import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
 import { CastList } from "@/components/cast-list";
@@ -90,8 +99,16 @@ export default async function FilmPage({ params }: PageProps<"/film/[id]">) {
         </div>
 
         {film.belongs_to_collection ? (
-          <p className="label text-accent border-rule mt-8 border-t pt-8">
-            Part of {film.belongs_to_collection.name}
+          <p className="border-rule mt-8 border-t pt-8">
+            <Link
+              href={franchiseHref(
+                film.belongs_to_collection.id,
+                film.belongs_to_collection.name,
+              )}
+              className="label text-accent hover:underline"
+            >
+              Part of the {franchiseName(film.belongs_to_collection.name)} franchise →
+            </Link>
           </p>
         ) : null}
 

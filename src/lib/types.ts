@@ -229,6 +229,60 @@ export function personHref(id: number, name: string): string {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Franchises (TMDB calls them collections)                                    */
+/* -------------------------------------------------------------------------- */
+
+export interface CollectionPart {
+  id: number;
+  title: string;
+  release_date?: string;
+  poster_path: string | null;
+  overview: string;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface CollectionDetail {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: CollectionPart[];
+}
+
+/**
+ * TMDB names almost every collection "<Something> Collection" — "Alien Collection", "The
+ * Lord of the Rings Collection". The suffix is TMDB's filing convention, not part of the
+ * franchise's name, and reading "Part of the Alien Collection collection" is the kind of
+ * seam that makes an app feel assembled rather than designed.
+ *
+ * Stripped only when it is actually there, so a collection named something else survives
+ * untouched rather than being mangled by a rule that assumed a pattern.
+ */
+export function franchiseName(name: string): string {
+  return name.replace(/\s+Collection$/i, "").trim() || name;
+}
+
+export function franchiseHref(id: number, name: string): string {
+  return `/franchise/${id}-${slugify(franchiseName(name))}`;
+}
+
+/**
+ * Franchise entries run in release order — the order they came out, not the order the story
+ * happens in.
+ *
+ * Undated entries (announced sequels TMDB already knows about) sort to the end rather than
+ * the start, which is where an empty date string would otherwise put them.
+ */
+export function inReleaseOrder(parts: CollectionPart[]): CollectionPart[] {
+  const dated = parts.filter((p) => p.release_date);
+  const undated = parts.filter((p) => !p.release_date);
+  dated.sort((a, b) => (a.release_date ?? "").localeCompare(b.release_date ?? ""));
+  return [...dated, ...undated];
+}
+
+/* -------------------------------------------------------------------------- */
 /* People and credits                                                          */
 /* -------------------------------------------------------------------------- */
 
