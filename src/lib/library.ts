@@ -61,9 +61,29 @@ export interface LibraryEntry extends TitleRef {
   updatedAt: string;
 }
 
+/**
+ * Which episodes of one series have been watched, keyed by season number.
+ *
+ * Both levels are keyed by strings because that is what JSON gives back, and pretending
+ * otherwise with `Record<number, …>` would be a type that the parser immediately disproves.
+ * Values are episode numbers, sorted and unique — `{ "1": [1, 2, 3] }` reads in an export
+ * as plainly as it does here, which is the whole reason #3's file has to stay legible.
+ */
+export type SeriesProgress = Record<string, number[]>;
+
 export interface Library {
   version: 1;
   entries: Record<string, LibraryEntry>;
+  /**
+   * Episode progress, keyed by series id — its own map beside `entries` rather than a field
+   * inside them, exactly as decisions.md #35 committed to.
+   *
+   * It joins rather than replaces: a series still carries one of three title-level statuses,
+   * and this rolls *up* into that value. Keeping it separate is also what lets the schema
+   * arrive without a version bump — an older file simply has no `progress`, and a reader
+   * that finds none gets an empty map rather than a rejected library.
+   */
+  progress: Record<string, SeriesProgress>;
 }
 
 const STORAGE_KEY = "ensemble:library";
@@ -76,7 +96,11 @@ const VERSION = 1;
  * a getter that builds a new object every time loops forever. Every read path in this file
  * returns either this constant or a cached object.
  */
-const EMPTY: Library = Object.freeze({ version: VERSION, entries: {} }) as Library;
+const EMPTY: Library = Object.freeze({
+  version: VERSION,
+  entries: {},
+  progress: {},
+}) as Library;
 
 export function titleKey(kind: TitleKind, id: number): string {
   return `${kind}:${id}`;
@@ -123,6 +147,45 @@ function parseEntry(key: string, value: unknown): LibraryEntry | null {
 }
 
 /**
+ * A season's watched episodes: integers, deduplicated, sorted, and nothing else.
+ *
+ * Episode numbers are allowed to be zero because TMDB genuinely numbers some specials `0`.
+ * They are not bounded from above, deliberately — the library has no idea how long a season
+ * is, and inventing a ceiling here would mean the parser disagreeing with TMDB about a
+ * series it has never seen.
+ */
+function parseSeason(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+
+  const episodes = new Set<number>();
+  for (const episode of value) {
+    if (typeof episode === "number" && Number.isInteger(episode) && episode >= 0) {
+      episodes.add(episode);
+    }
+  }
+
+  return episodes.size > 0 ? [...episodes].sort((a, b) => a - b) : null;
+}
+
+/** A series' seasons. Empty seasons are dropped, and a series left with none is dropped. */
+function parseProgress(value: unknown): SeriesProgress | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+
+  const seasons: SeriesProgress = {};
+  for (const [key, episodes] of Object.entries(value as Record<string, unknown>)) {
+    // The key has to survive the round trip through `String(number)`, which rejects "01"
+    // and " 2" as well as outright rubbish.
+    const season = Number.parseInt(key, 10);
+    if (!Number.isInteger(season) || season < 0 || String(season) !== key) continue;
+
+    const parsed = parseSeason(episodes);
+    if (parsed) seasons[key] = parsed;
+  }
+
+  return Object.keys(seasons).length > 0 ? seasons : null;
+}
+
+/**
  * Validation is written here rather than at the import screen because import and page load
  * read the same shape, and a parser that only guards the file-picker leaves the larger
  * surface — a `localStorage` value edited by hand, or left behind by an older build —
@@ -152,7 +215,23 @@ export function parseLibrary(source: string | null): Library {
     if (entry) entries[key] = entry;
   }
 
-  return { version: VERSION, entries };
+  /*
+   * `progress` is optional rather than required, and that is the whole no-migration
+   * promise: every library written before this block has no such key, and reads as a
+   * library with no episodes rather than as a library that fails to parse.
+   */
+  const progress: Record<string, SeriesProgress> = {};
+  if (typeof raw.progress === "object" && raw.progress !== null) {
+    for (const [key, value] of Object.entries(raw.progress as Record<string, unknown>)) {
+      const id = Number.parseInt(key, 10);
+      if (!Number.isInteger(id) || id <= 0 || String(id) !== key) continue;
+
+      const seasons = parseProgress(value);
+      if (seasons) progress[key] = seasons;
+    }
+  }
+
+  return { version: VERSION, entries, progress };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -224,8 +303,11 @@ export function getServerSnapshot(): Library {
   return EMPTY;
 }
 
-function write(entries: Record<string, LibraryEntry>) {
-  const next: Library = { version: VERSION, entries };
+function write(
+  entries: Record<string, LibraryEntry>,
+  progress: Record<string, SeriesProgress> = getSnapshot().progress,
+) {
+  const next: Library = { version: VERSION, entries, progress };
   // The in-memory cache is updated first and unconditionally: if persistence fails, the
   // click the user just made still stands for the rest of the session rather than
   // springing back with no explanation.
@@ -314,4 +396,223 @@ export function favourites(library: Library): LibraryEntry[] {
   return Object.values(library.entries)
     .filter((entry) => entry.favourite)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Episode progress                                                            */
+/* -------------------------------------------------------------------------- */
+
+/** Specials are season 0 in TMDB's numbering, and they never gate finishing a series. */
+export const SPECIALS_SEASON = 0;
+
+/**
+ * How many episodes each season has, as counted by whichever page is doing the asking.
+ *
+ * **This is the world's data and it is passed in, never stored** — the same boundary #32
+ * draws around the display snapshot, held from the other side. The library knows which
+ * episodes you ticked; it has no idea how many exist, and storing that would put a number
+ * TMDB owns into your export where it could quietly go stale and change what "finished"
+ * means without anything having happened.
+ *
+ * Seasons are listed only when their episode count is *confirmable* — see `censusFrom`.
+ */
+export interface SeasonCensus {
+  season: number;
+  episodes: number;
+}
+
+export function seriesProgress(library: Library, seriesId: number): SeriesProgress {
+  return library.progress[String(seriesId)] ?? {};
+}
+
+export function watchedInSeason(
+  library: Library,
+  seriesId: number,
+  season: number,
+): number[] {
+  return seriesProgress(library, seriesId)[String(season)] ?? [];
+}
+
+/** Episodes ticked across a series, excluding specials, which are counted separately. */
+export function watchedCount(library: Library, seriesId: number): number {
+  const progress = seriesProgress(library, seriesId);
+  return Object.entries(progress)
+    .filter(([season]) => Number(season) !== SPECIALS_SEASON)
+    .reduce((total, [, episodes]) => total + episodes.length, 0);
+}
+
+/**
+ * Replace one season's watched set.
+ *
+ * Empty seasons and empty series are deleted rather than kept as `[]`, for the reason
+ * `update` deletes empty entries: a record that says you did nothing is not a fact about
+ * you, and an export full of them is a list of pages you happened to open.
+ */
+function writeSeason(seriesId: number, season: number, episodes: number[]) {
+  const key = String(seriesId);
+  const seasonKey = String(season);
+  const progress = { ...getSnapshot().progress };
+  const seasons = { ...(progress[key] ?? {}) };
+
+  if (episodes.length === 0) {
+    delete seasons[seasonKey];
+  } else {
+    seasons[seasonKey] = [...new Set(episodes)].sort((a, b) => a - b);
+  }
+
+  if (Object.keys(seasons).length === 0) {
+    delete progress[key];
+  } else {
+    progress[key] = seasons;
+  }
+
+  write(getSnapshot().entries, progress);
+}
+
+export function setEpisodeWatched(
+  seriesId: number,
+  season: number,
+  episode: number,
+  watched: boolean,
+) {
+  const current = watchedInSeason(getSnapshot(), seriesId, season);
+  writeSeason(
+    seriesId,
+    season,
+    watched ? [...current, episode] : current.filter((e) => e !== episode),
+  );
+}
+
+export function setSeasonWatched(seriesId: number, season: number, episodes: number[]) {
+  writeSeason(seriesId, season, episodes);
+}
+
+/**
+ * Mark everything up to and including one episode — every earlier season in full, then this
+ * season up to the chosen number.
+ *
+ * This is the affordance that separates a tracker from a demo: nobody starts recording at
+ * S1E1, they start at whatever they are watching tonight, and the alternative is forty
+ * checkboxes. It walks the census rather than the stored progress so that "everything
+ * before this" means everything that exists, not everything already ticked.
+ *
+ * **Later seasons are left alone.** Someone marking S4E2 is saying where they are, not
+ * unsaying a season five they may have watched out of order.
+ */
+export function markThrough(
+  seriesId: number,
+  season: number,
+  episode: number,
+  census: SeasonCensus[],
+) {
+  const key = String(seriesId);
+  const progress = { ...getSnapshot().progress };
+  const seasons = { ...(progress[key] ?? {}) };
+
+  for (const entry of census) {
+    if (entry.season === SPECIALS_SEASON || entry.season > season) continue;
+
+    const upTo = entry.season === season ? episode : entry.episodes;
+    const existing = seasons[String(entry.season)] ?? [];
+    const filled = new Set(existing);
+    for (let e = 1; e <= upTo; e++) filled.add(e);
+
+    if (filled.size > 0) seasons[String(entry.season)] = [...filled].sort((a, b) => a - b);
+  }
+
+  if (Object.keys(seasons).length > 0) progress[key] = seasons;
+  write(getSnapshot().entries, progress);
+}
+
+/** Every confirmable episode of every season, specials excluded. Used by the Finished control. */
+export function fillSeries(seriesId: number, census: SeasonCensus[]) {
+  const key = String(seriesId);
+  const progress = { ...getSnapshot().progress };
+  const seasons = { ...(progress[key] ?? {}) };
+
+  for (const entry of census) {
+    if (entry.season === SPECIALS_SEASON || entry.episodes === 0) continue;
+    const filled = new Set(seasons[String(entry.season)] ?? []);
+    for (let e = 1; e <= entry.episodes; e++) filled.add(e);
+    seasons[String(entry.season)] = [...filled].sort((a, b) => a - b);
+  }
+
+  if (Object.keys(seasons).length > 0) progress[key] = seasons;
+  write(getSnapshot().entries, progress);
+}
+
+/** Forget every episode of a series, leaving specials and the title-level status alone. */
+export function clearSeries(seriesId: number) {
+  const key = String(seriesId);
+  const progress = { ...getSnapshot().progress };
+  const specials = progress[key]?.[String(SPECIALS_SEASON)];
+
+  if (specials) progress[key] = { [String(SPECIALS_SEASON)]: specials };
+  else delete progress[key];
+
+  write(getSnapshot().entries, progress);
+}
+
+/* -------------------------------------------------------------------------- */
+/* The roll-up                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Ranked, so the effective status can be the higher of the two claims rather than a branch. */
+const RANK: Record<WatchStatus, number> = { want: 0, watching: 1, watched: 2 };
+
+/**
+ * The status implied by the episodes you have ticked, or `null` when you have ticked none.
+ *
+ * **A still-running or unaired series is capped at "watching" and can never derive
+ * "watched".** That is decisions.md #15's argument applied to progress: finishing is a claim
+ * about a story that ended, and a series with more coming has not ended however much of it
+ * you have seen. The cap is written explicitly rather than left to fall out of the
+ * arithmetic — a season TMDB has not published yet is simply absent from the census, so a
+ * viewer caught up on a running show would otherwise satisfy "every season complete" and be
+ * told they had finished something still in production.
+ *
+ * Specials are excluded on both sides. Breaking Bad has nine of them; counting them would
+ * mean nobody ever finishes it.
+ */
+export function derivedStatus(
+  progress: SeriesProgress,
+  census: SeasonCensus[],
+  running: boolean,
+): WatchStatus | null {
+  const countable = census.filter((s) => s.season !== SPECIALS_SEASON && s.episodes > 0);
+
+  const watched = Object.entries(progress)
+    .filter(([season]) => Number(season) !== SPECIALS_SEASON)
+    .reduce((total, [, episodes]) => total + episodes.length, 0);
+
+  if (watched === 0) return null;
+  if (running) return "watching";
+  if (countable.length === 0) return "watching";
+
+  const complete = countable.every((entry) => {
+    const ticked = progress[String(entry.season)] ?? [];
+    return ticked.filter((e) => e >= 1 && e <= entry.episodes).length >= entry.episodes;
+  });
+
+  return complete ? "watched" : "watching";
+}
+
+/**
+ * What the app should say about a series: the higher of what you claimed and what your
+ * episodes imply.
+ *
+ * Taking the maximum is what makes the roll-up **promote-only without storing a second
+ * field**. A status you set by hand is never lowered by episode activity, because it is
+ * still one of the two candidates; a status you never set follows the grid freely in both
+ * directions, because the other candidate is `null`. Un-ticking an episode therefore drops
+ * you back to whatever you actually claimed, rather than stranding you on a "Finished" that
+ * the grid no longer supports.
+ */
+export function effectiveStatus(
+  claimed: WatchStatus | null | undefined,
+  derived: WatchStatus | null,
+): WatchStatus | null {
+  if (!claimed) return derived;
+  if (!derived) return claimed;
+  return RANK[derived] > RANK[claimed] ? derived : claimed;
 }
