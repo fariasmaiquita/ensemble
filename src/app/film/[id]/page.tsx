@@ -14,6 +14,7 @@ import {
 import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
 import { CastList } from "@/components/cast-list";
+import { LibraryControls } from "@/components/library-controls";
 
 interface FilmWithCredits extends MovieDetail {
   credits: Credits;
@@ -64,6 +65,14 @@ export default async function FilmPage({ params }: PageProps<"/film/[id]">) {
         <p className="label text-ink-muted mt-3">
           {["Film", released, runtime].filter(Boolean).join(" · ")}
         </p>
+
+        <LibraryControls
+          kind="film"
+          id={film.id}
+          title={film.title}
+          year={released}
+          posterPath={film.poster_path}
+        />
 
         <div className="border-rule mt-8 flex gap-6 border-t pt-8 sm:gap-8">
           <Plate
