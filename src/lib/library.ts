@@ -162,6 +162,25 @@ export function parseLibrary(source: string | null): Library {
 let cache: Library | null = null;
 const listeners = new Set<() => void>();
 
+/**
+ * Whether this browser is refusing to persist — private mode, a full quota, storage
+ * disabled outright.
+ *
+ * It is tracked because the failure is otherwise **invisible and indistinguishable from
+ * success**: the write is synchronous, so a control fills in exactly as it would have, and
+ * nothing is written. A console warning is not a user-facing answer. See decisions.md #37.
+ */
+let blocked = false;
+
+/** Primitive, so it is a stable snapshot for `useSyncExternalStore` without caching. */
+export function getStorageBlocked(): boolean {
+  return blocked;
+}
+
+export function getStorageBlockedServer(): boolean {
+  return false;
+}
+
 function emit() {
   for (const listener of listeners) listener();
 }
@@ -188,7 +207,9 @@ export function getSnapshot(): Library {
     cache = parseLibrary(window.localStorage.getItem(STORAGE_KEY));
   } catch {
     // Storage can be unavailable outright — Safari private mode, a blocked third-party
-    // context, a user who disabled it. The app still works; it just cannot remember.
+    // context, a user who disabled it. The app still works; it just cannot remember, and
+    // it says so rather than letting every control look like it saved.
+    blocked = true;
     cache = EMPTY;
   }
   return cache;
@@ -211,8 +232,9 @@ function write(entries: Record<string, LibraryEntry>) {
   cache = next;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch (error) {
-    console.warn("Ensemble could not save to localStorage; this session only.", error);
+    blocked = false;
+  } catch {
+    blocked = true;
   }
   emit();
 }
