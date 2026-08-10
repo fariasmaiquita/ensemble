@@ -165,6 +165,11 @@ export function seriesStanding(status: string): SeriesStanding {
   }
 }
 
+/** A series that may still gain episodes. The roll-up refuses to call either one finished. */
+export function isOpenEnded(standing: SeriesStanding): boolean {
+  return standing === "running" || standing === "upcoming";
+}
+
 export function standingLabel(standing: SeriesStanding): string {
   switch (standing) {
     case "running":
@@ -178,6 +183,79 @@ export function standingLabel(standing: SeriesStanding): string {
     default:
       return "Status unknown";
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Episodes                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export interface Episode {
+  id: number;
+  episode_number: number;
+  season_number: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  runtime: number | null;
+  still_path: string | null;
+  /** TMDB's own marker: `standard`, `finale`, `mid_season`. */
+  episode_type?: string;
+}
+
+export interface SeasonDetail {
+  id: number;
+  season_number: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  poster_path: string | null;
+  episodes: Episode[];
+}
+
+export function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Whether an episode exists yet.
+ *
+ * An episode with no air date at all counts as unaired: TMDB knows it is coming and does not
+ * know when, which is not the same as it having quietly happened.
+ */
+export function hasAired(episode: Episode, on: string = today()): boolean {
+  return episode.air_date !== null && episode.air_date <= on;
+}
+
+/**
+ * The seasons whose episode counts the app is willing to treat as fact.
+ *
+ * `episode_count` is the number of episodes TMDB has *announced*, not the number that have
+ * aired — measured, not assumed: on 2026-08-10 Lioness season 3 reported eight episodes with
+ * two broadcast. So a count is only usable where nothing about the season is still in the
+ * future, and two separate tests are needed because they catch different things:
+ *
+ * - **A season that has not started** — Reacher's fourth premieres in two days, Silo's has no
+ *   date and no episodes at all — is caught by its air date.
+ * - **A season part-way through its run** has an air date safely in the past and is caught by
+ *   nothing except being the newest season of a series still in production.
+ *
+ * The result under-claims by design. Excluding a season the app cannot vouch for costs a
+ * viewer a few ticks; including one would have the app record episodes that do not exist yet
+ * in the user's own export.
+ */
+export function airedSeasons(series: TvDetail, on: string = today()): Season[] {
+  const open = isOpenEnded(seriesStanding(series.status));
+  const newest = Math.max(
+    ...series.seasons.filter((s) => s.season_number !== 0).map((s) => s.season_number),
+    0,
+  );
+
+  return series.seasons.filter((season) => {
+    if (season.episode_count === 0) return false;
+    if (!season.air_date || season.air_date > on) return false;
+    if (open && season.season_number === newest) return false;
+    return true;
+  });
 }
 
 /* -------------------------------------------------------------------------- */

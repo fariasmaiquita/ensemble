@@ -7,19 +7,26 @@ import { Heart } from "@phosphor-icons/react/dist/csr/Heart";
 import { PlayCircle } from "@phosphor-icons/react/dist/csr/PlayCircle";
 import type { Icon } from "@phosphor-icons/react";
 import {
+  type SeasonCensus,
   type TitleRef,
   type WatchStatus,
   STATUSES,
+  clearSeries,
+  derivedStatus,
+  effectiveStatus,
+  fillSeries,
   getEntry,
   getServerSnapshot,
   getSnapshot,
   getStorageBlocked,
   getStorageBlockedServer,
   refreshRef,
+  seriesProgress,
   setStatus,
   statusLabel,
   subscribe,
   toggleFavourite,
+  watchedCount,
 } from "@/lib/library";
 
 const ICONS: Record<WatchStatus, Icon> = {
@@ -36,8 +43,20 @@ const ICONS: Record<WatchStatus, Icon> = {
  * refused: decisions.md #13 makes a result row a catalogue entry you read and click, and a
  * row with buttons in it is a storefront listing.
  */
-export function LibraryControls(props: TitleRef) {
-  const { kind, id, title, year, posterPath } = props;
+interface LibraryControlsProps extends TitleRef {
+  /**
+   * Series only: the seasons whose episode counts are confirmable, from `airedSeasons`.
+   * Passed in rather than read from storage — the library holds your ticks and has no idea
+   * how many episodes exist (decisions.md #32, and `SeasonCensus`).
+   */
+  census?: SeasonCensus[];
+  /** Series only: whether the series may still gain episodes, which caps the roll-up. */
+  openEnded?: boolean;
+}
+
+export function LibraryControls(props: LibraryControlsProps) {
+  const { kind, id, title, year, posterPath, census, openEnded } = props;
+  const ref: TitleRef = { kind, id, title, year, posterPath };
 
   const library = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
@@ -61,6 +80,47 @@ export function LibraryControls(props: TitleRef) {
   );
 
   const entry = getEntry(library, kind, id);
+
+  /*
+   * Two claims about the same series, and the app shows the higher of them.
+   *
+   * `entry.status` is what you said; `derived` is what your ticked episodes imply. Taking the
+   * maximum is what makes the roll-up promote-only without a second stored field — see
+   * `effectiveStatus`. A film has no episodes and no census, so both are inert here.
+   */
+  const progress = kind === "series" ? seriesProgress(library, id) : {};
+  const derived =
+    kind === "series" ? derivedStatus(progress, census ?? [], openEnded ?? false) : null;
+  const status = effectiveStatus(entry?.status, derived);
+  const episodes = kind === "series" ? watchedCount(library, id) : 0;
+
+  /*
+   * The one state where clearing a status cannot clear it: you have ticked every episode, so
+   * the grid goes on implying Finished after the claim is gone. Rather than let the control
+   * look broken — or delete the ticks, which would assert you had watched none of it — the
+   * band says which fact is holding it and offers the only action that changes it.
+   */
+  const heldByEpisodes = known && derived !== null && entry?.status == null;
+
+  function onStatusClick(next: WatchStatus) {
+    const claimed = entry?.status;
+
+    if (claimed === next) {
+      // Clicking the state you are already in clears it. The grid is deliberately untouched:
+      // "I have not finished this" is not the same statement as "I have seen none of it".
+      setStatus(ref, null);
+      return;
+    }
+
+    setStatus(ref, next);
+
+    // Finishing a series fills the grid, so the band and the season list can never disagree
+    // about a series you said you finished. It fills only what `airedSeasons` vouches for,
+    // so a season still going to air is left empty rather than invented.
+    if (next === "watched" && kind === "series" && census && census.length > 0) {
+      fillSeries(id, census);
+    }
+  }
 
   // The one moment the app holds both the stored copy of a title and TMDB's current answer.
   // Writes only when they actually differ — see `refreshRef`.
@@ -90,22 +150,20 @@ export function LibraryControls(props: TitleRef) {
         className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6"
         aria-busy={!known}
       >
-        {STATUSES[kind].map((status) => {
-          const IconFor = ICONS[status];
-          const active = known && entry?.status === status;
+        {STATUSES[kind].map((option) => {
+          const IconFor = ICONS[option];
+          const active = known && status === option;
 
           return (
             <button
-              key={status}
+              key={option}
               type="button"
               disabled={!known}
               // Undefined rather than `false` until the state is known. A disabled control
               // reporting `aria-pressed="false"` tells a screen reader the same untruth the
               // greyed-out styling exists to avoid telling everyone else.
               aria-pressed={known ? active : undefined}
-              // Clicking the state you are already in clears it, so there is no separate
-              // "remove" affordance to design or explain.
-              onClick={() => setStatus(props, active ? null : status)}
+              onClick={() => onStatusClick(option)}
               className={`label flex cursor-pointer items-center gap-2 border-b-2 pb-1 transition-colors disabled:cursor-default ${
                 active
                   ? "border-ink text-ink"
@@ -113,7 +171,7 @@ export function LibraryControls(props: TitleRef) {
               }`}
             >
               <IconFor size={17} weight={active ? "fill" : "regular"} aria-hidden />
-              {statusLabel(status, kind)}
+              {statusLabel(option, kind)}
             </button>
           );
         })}
@@ -130,7 +188,9 @@ export function LibraryControls(props: TitleRef) {
               ? "Remove from favourites"
               : "Add to favourites"
         }
-        onClick={() => toggleFavourite(props)}
+        // `ref`, not `props`: the entry is built by spreading whatever it is handed, and the
+        // census has no business being written into the user's stored library.
+        onClick={() => toggleFavourite(ref)}
         className={`label flex cursor-pointer items-center gap-2 border-b-2 pb-1 transition-colors disabled:cursor-default ${
           known && entry?.favourite
             ? "border-ink text-ink"
@@ -154,6 +214,21 @@ export function LibraryControls(props: TitleRef) {
         registers, the icon still fills, and nothing is written. Silently, and identically to
         success. Saying so is the same obligation as #23's withheld-credit count.
       */}
+      {heldByEpisodes ? (
+        <p className="text-meta text-ink-muted basis-full">
+          {statusLabel(status as WatchStatus, kind)} because{" "}
+          {episodes === 1 ? "one episode is" : `${episodes} episodes are`} marked watched.{" "}
+          <button
+            type="button"
+            onClick={() => clearSeries(id)}
+            className="cursor-pointer underline underline-offset-2 hover:text-ink"
+          >
+            Clear episodes
+          </button>
+          .
+        </p>
+      ) : null}
+
       {blocked ? (
         <p className="text-meta text-ink-muted basis-full italic">
           Not saved — this browser is blocking storage, so nothing here will be remembered
