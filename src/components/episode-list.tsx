@@ -83,34 +83,69 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
           return (
             <li key={episode.id} className="border-rule group/row border-b">
               <div className="flex items-baseline gap-3 py-3">
-                <button
-                  type="button"
-                  disabled={!known || !airedYet}
-                  aria-pressed={known && airedYet ? isWatched : undefined}
-                  aria-label={`${
-                    isWatched ? "Mark unwatched" : "Mark watched"
-                  }: episode ${number}, ${episode.name}`}
-                  onClick={() => setEpisodeWatched(seriesId, season, number, !isWatched)}
-                  className={`shrink-0 translate-y-0.5 cursor-pointer transition-colors disabled:cursor-default ${
-                    isWatched ? "text-ink" : "text-ink-faint hover:text-ink-muted"
-                  } ${!airedYet ? "opacity-40" : ""}`}
-                >
-                  {isWatched ? (
-                    <CheckCircle size={19} weight="fill" aria-hidden />
-                  ) : (
-                    <Circle size={19} aria-hidden />
-                  )}
-                </button>
+                {/*
+                  An unaired episode gets no control at all, not a dimmed one.
+                  A faded circle beside a solid one is a difference you have to look for;
+                  an empty slot is one you cannot miss. It is also the more honest
+                  component — a disabled button says "this could be ticked and is not",
+                  where the truth is that there is nothing here to tick yet. Same reasoning
+                  as #31, which would rather render nothing than assert a state it does not
+                  have.
+                */}
+                {airedYet ? (
+                  <button
+                    type="button"
+                    disabled={!known}
+                    aria-pressed={known ? isWatched : undefined}
+                    aria-label={`${
+                      isWatched ? "Mark unwatched" : "Mark watched"
+                    }: episode ${number}, ${episode.name}`}
+                    onClick={() => setEpisodeWatched(seriesId, season, number, !isWatched)}
+                    className={`shrink-0 translate-y-0.5 cursor-pointer transition-colors disabled:cursor-default ${
+                      isWatched ? "text-ink" : "text-ink-faint hover:text-ink-muted"
+                    }`}
+                  >
+                    {isWatched ? (
+                      <CheckCircle size={19} weight="fill" aria-hidden />
+                    ) : (
+                      <Circle size={19} aria-hidden />
+                    )}
+                  </button>
+                ) : (
+                  <span
+                    className="text-ink-faint/50 w-[19px] shrink-0 text-center"
+                    aria-hidden
+                  >
+                    –
+                  </span>
+                )}
 
-                <span className="text-meta text-ink-faint w-6 shrink-0 tabular-nums">
+                <span
+                  className={`text-meta w-6 shrink-0 tabular-nums ${
+                    airedYet ? "text-ink-faint" : "text-ink-faint/60"
+                  }`}
+                >
                   {number}
                 </span>
 
                 {/* Nothing truncates here either — #21, and an episode title is the thing
                     you are scanning for. */}
                 <span className="min-w-0 flex-1">
-                  <span className={`text-body ${airedYet ? "text-ink" : "text-ink-muted"}`}>
+                  <span
+                    className={`text-body ${airedYet ? "text-ink" : "text-ink-faint"}`}
+                  >
                     {episode.name}
+                  </span>
+
+                  {/*
+                    On narrow screens the date sits under the title rather than beside it.
+                    Holding a fixed column for it left about 150px for everything else, which
+                    wrapped both the episode title and the button below it — four lines per
+                    episode, on the app's longest list. Below the title, each gets the full
+                    width and almost every row fits on one line.
+                  */}
+                  <span className="text-meta text-ink-faint mt-0.5 block sm:hidden">
+                    {meta || "Date to be confirmed"}
                   </span>
 
                   {airedYet ? (
@@ -119,21 +154,26 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
                       disabled={!known}
                       onClick={() => markThrough(seriesId, season, number, census)}
                       /*
-                       * Revealed on hover on a pointer device, and permanently visible where
-                       * there is no hover to reveal it with. A touch user has no way to
-                       * discover a control that only exists during a state their device
-                       * cannot enter — which would have made the one affordance that turns
-                       * this from a demo into a tracker reachable on desktop only.
+                       * Permanently visible, not revealed on hover.
+                       *
+                       * It was hover-only, which was quieter and hid the one affordance that
+                       * turns this from a demo into a tracker: nothing on the row suggested
+                       * it existed, so finding it depended on sweeping a cursor across text
+                       * for no reason. A control nobody discovers is not a control.
+                       *
+                       * On narrow screens it takes its own line, flush left — following the
+                       * title inline pushed it to a ragged position that read as centred and
+                       * belonging to nothing.
                        */
-                      className="label text-ink-faint hover:text-ink ml-3 cursor-pointer opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 disabled:cursor-default [@media(hover:none)]:opacity-100"
+                      className="label text-ink-faint hover:text-ink mt-1 block cursor-pointer text-left transition-colors disabled:cursor-default sm:mt-0 sm:ml-3 sm:inline"
                     >
                       and everything before
                     </button>
                   ) : null}
                 </span>
 
-                <span className="text-meta text-ink-faint shrink-0 text-right">
-                  {airedYet ? meta : meta || "Date to be confirmed"}
+                <span className="text-meta text-ink-faint hidden shrink-0 text-right sm:block">
+                  {meta || "Date to be confirmed"}
                 </span>
               </div>
             </li>

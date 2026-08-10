@@ -104,11 +104,16 @@ export default async function SeasonPage({
       <SearchField />
 
       <article className="pt-10">
+        {/*
+          The eyebrow was the series name and read as a caption rather than a way back.
+          The arrow is what makes it a control: a season is the one page in the app you
+          arrive at from somewhere specific and expect to return to.
+        */}
         <Link
           href={seriesHref(series.id, series.name)}
-          className="label text-ink-faint hover:text-ink transition-colors"
+          className="label text-ink-faint hover:text-ink inline-block transition-colors"
         >
-          {series.name}
+          ← {series.name}
           {year(series.first_air_date) ? ` (${year(series.first_air_date)})` : ""}
         </Link>
 
@@ -132,27 +137,39 @@ export default async function SeasonPage({
           census={census}
         />
 
-        <nav className="border-rule mt-10 flex items-baseline justify-between gap-6 border-t pt-6">
+        {/*
+          Prev and next reach sideways; the middle link reaches back up. Having the return
+          at both ends of the page matters because the episode list is the longest thing in
+          the app — on a 197-row season, scrolling back to the eyebrow is the whole page.
+        */}
+        <nav className="border-rule mt-10 flex items-baseline justify-between gap-4 border-t pt-6">
           {previous ? (
             <Link
               href={seasonHref(series.id, series.name, previous.season_number)}
-              className="label text-ink-faint hover:text-ink transition-colors"
+              className="label text-ink-faint hover:text-ink flex-1 transition-colors"
             >
               ← {previous.name}
             </Link>
           ) : (
-            <span />
+            <span className="flex-1" />
           )}
+
+          <Link
+            href={seriesHref(series.id, series.name)}
+            className="label text-ink-faint hover:text-ink shrink-0 text-center transition-colors"
+          >
+            All seasons
+          </Link>
 
           {next ? (
             <Link
               href={seasonHref(series.id, series.name, next.season_number)}
-              className="label text-ink-faint hover:text-ink text-right transition-colors"
+              className="label text-ink-faint hover:text-ink flex-1 text-right transition-colors"
             >
               {next.name} →
             </Link>
           ) : (
-            <span />
+            <span className="flex-1" />
           )}
         </nav>
       </article>
