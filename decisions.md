@@ -620,3 +620,193 @@ wiring up data.
 **Rejected: styling as I go**, which feels faster and produces a design that is the sum of
 whatever seemed reasonable at each step. The visual identity is one of the two things this
 project exists to demonstrate; it does not get made by accident.
+
+---
+
+## 30. Credits are fetched on demand, never cached at favourite-time
+
+**2026-08-10.** The question #6 and #18 both deferred. Common actors needs the cast of every
+favourited title, which is N requests, and `append_to_response` cannot help because it is
+per-request. **Resolved: the server fetches them when the question is asked**, leaning on the
+hour-long fetch cache from #6.
+
+**Rejected: fetching a title's cast when it is favourited and storing it alongside.** It is
+the obvious optimisation and it is wrong here for four reasons, the first of which has
+nothing to do with performance:
+
+- **It puts TMDB's data in the user's export file.** #3 says the answer to "how do I move my
+  data" is a file. A file carrying a frozen copy of twenty cast lists is not the user's
+  library, it is a stale mirror of someone else's database — and it is the storage-layer
+  version of the rule that already decides what the home page may show: **your data in, the
+  world's data out.**
+- **It does not remove the N requests, it relocates them** to the moment someone clicks a
+  toggle. Favouriting becomes a network operation that can fail, and a failed fetch leaves a
+  half-populated cache — so the on-demand path has to exist anyway, as a fallback. It is a
+  cache in front of this decision, not an alternative to it.
+- **It throws away the thing #4 and #6 were built for.** A server-side fetch cache is shared
+  by everyone: another visitor opening *Alien* warms its credits for you. A `localStorage`
+  cache is warm for exactly one person on exactly one browser.
+- **A cast list cached at favourite-time never updates**, so the headline feature would
+  quietly decay against a dataset that does not.
+
+**Also rejected: caching only the derived slice** — the top few cast members per favourite
+rather than the whole credit list. Smaller, and it keeps every one of the staleness and
+failed-write problems while adding a second definition of "the cast".
+
+**The consequence is a design problem, and it is the good kind.** With no account, the server
+cannot know your favourites while it renders, so the one section that reasons over your
+library is the one section that cannot be server-rendered — it arrives after hydration and
+needs a designed waiting state. That is an implementation constraint shaping the interface,
+which is the material this project exists to show.
+
+---
+
+## 31. A control that does not know yet says so
+
+**2026-08-10.** The watch and favourite controls render inert and unclaimed in the server
+HTML, and resolve once the browser has read `localStorage`.
+
+**Rejected: rendering the unset state and flipping after hydration**, which is what almost
+every app does and which costs nothing to build. For a few hundred milliseconds it has the
+page assert *you have not watched this* about a film someone finished last week. It is brief
+and it is still false, and this app has now twice refused to state something it does not know
+— #17 would not let a 2028 announcement imply a film exists, #23 would not let a filter drop
+two thirds of a list without saying so.
+
+**Rejected separately: rendering nothing until mounted.** No false claim, but the band pops
+into existence and shoves the page down.
+
+**The same honesty applies to the accessibility tree, which is where the first version was
+wrong.** The disabled buttons shipped `aria-pressed="false"` — telling a screen reader
+exactly the thing the greyed-out styling exists to avoid telling everyone else. The attribute
+is now omitted entirely until the state is known, and the group carries `aria-busy`. Caught
+by reading the server HTML with `curl` rather than by looking at the page.
+
+---
+
+## 32. One object, and only labels are copied into it
+
+**2026-08-10.** The whole library is a single versioned JSON object under one key. Each entry
+holds the user's facts — status, favourite, when it changed — plus a **small display
+snapshot**: title, year, poster path.
+
+**The snapshot is a deliberate hole in the rule #30 just drew**, so it is worth saying where
+the edge is. What #30 refuses is caching *the answer to a question the app asks* — a cast
+list, from which common actors are computed. What this stores is **the label of the row you
+saved**. Without it the home page cannot name your own library without a request per title,
+and an exported file is a list of opaque ids that no human can read — which matters, because
+#3 makes that file the entire answer to "how do I move my data".
+
+**Staleness is handled by refreshing rather than by not storing.** Opening a title's page is
+the one moment the app holds both the stored copy and TMDB's current answer, so it rewrites
+the label there — **and only when it actually differs**, because writing on every visit would
+move `updatedAt` and quietly turn "recently updated" into "recently viewed".
+
+**Rejected: a key per title.** Faster writes, but enumerating the library means scanning all
+of `localStorage` by prefix, and the export becomes a reconstruction instead of a read.
+
+**Entries are deleted the moment they hold nothing.** Un-watching the only thing you had
+marked removes the row rather than leaving `{status: null, favourite: false}` behind.
+Otherwise an export is mostly a list of pages someone happened to open.
+
+**The parser is written here rather than at the import screen**, and validates on every read.
+An import-only guard leaves the larger surface — a hand-edited value, or one left behind by
+an older build — completely unchecked. Verified against eight malformed inputs: garbage, a
+non-object, an unknown schema version, a key that disagrees with its own id, a status outside
+the vocabulary, a status a film cannot hold, an entry recording nothing, and a good row beside
+a broken one. **None threw, and the last one kept the good row** — a corrupt entry costs one
+title, not the library.
+
+---
+
+## 33. The controls live on detail pages only
+
+**2026-08-10.** Watch status and favourite appear in a ruled band under a film or series
+title. They do not appear on search results.
+
+**Rejected: controls on result rows**, which is a real convenience — marking things watched
+straight from a search is how these apps get used. #13 makes a result row a catalogue entry
+you read and click; a row with buttons in it is a storefront listing, which is the one thing
+the whole design refuses to be. One hour to reverse and no change to the stored shape, so
+this is cheap to revisit once the app has been lived in.
+
+**On narrow screens the band becomes a column, one control per line.** Measured, not assumed:
+at a real 375px viewport with the `sm:` branch confirmed inactive, the four series controls
+need 402px of words and wrapped into three ragged rows, orphaning *Finished* and *Favourite*
+on lines of their own. Nothing overflowed — it just looked like a mistake.
+
+**Rejected: dropping the words and keeping the icons**, which is what fits. A bookmark, a play
+mark and a tick with no labels are a guess, and this is the app that keeps character names on
+a cast list (#16) because the words are the content. The column costs about 20px more than the
+ragged wrap and reads as a checklist in a printed programme.
+
+**Rejected: the spot colour for an active control.** A filled heart in the accent would mark
+favouriting as the important act, and it is. But the accent already means two things — a
+cancelled series (#15) and a franchise's sequence number (#19) — and a third meaning is how a
+single spot colour stops being one. Active controls take plain ink and lean on Phosphor's fill
+weight instead. One line to reverse.
+
+---
+
+## 34. Phosphor for iconography
+
+**2026-08-10.** Farias's call. Icons come from one family, imported per icon rather than as a
+barrel, and the app icon is deliberately left until the end of v1.
+
+The reason it fits rather than merely being a preference: **Phosphor ships weights**, and
+regular-versus-fill is exactly the distinction the controls in #33 need — the same mark, one
+outlined and one solid, rather than two different glyphs or a colour change. That keeps the
+spot colour scarce, which is what #33 wanted anyway.
+
+**The honest cost:** it is the app's first UI dependency, in a project that had none. Kept
+small by importing from `@phosphor-icons/react/dist/csr/<Icon>` so a single icon does not pull
+the set.
+
+---
+
+## 35. Episode progress is its own block, and these three statuses are what it rolls up into
+
+**2026-08-10.** #8 committed to episode-level tracking and priced it at 5h against 2h for
+season-level. This block was budgeted at 3h. Rather than let the block absorb the difference
+quietly, the two were separated: this one builds the state layer, favourites and title-level
+status; episode progress gets its own block.
+
+**#8 is not reopened.** Episode-level is still the commitment and still the reason the app
+will not feel like a demo. What changed is the observation that the feature it was blocking —
+common actors, which leads the writeup — depends on **favourites**, not on progress. The
+stated prerequisite is satisfied by half the block.
+
+**The other half of the argument is that they are different kinds of work.** Episode-level is
+not more state, it is a season request per season and a new route — data-layer work wearing
+the same block's name.
+
+**So the schema is built for the join now rather than migrated later:** a series carries one
+of three statuses, and episode data will land in its own map keyed by series id and roll *up*
+into those three values rather than replacing them. **A film has only two statuses**, because
+a film has no middle.
+
+---
+
+## 36. A frozen transition read as a bug
+
+**2026-08-10.** Verifying the active state, `getComputedStyle` reported the favourite button
+at `#a2988d` — the faint ink — while its class list said `text-ink` and `aria-pressed` said
+`true`. It looked exactly like a broken conditional.
+
+**Nothing was broken.** The tab was backgrounded, `transition-colors` was mid-flight, and the
+`CSSTransition` sat at `playState: "running"` with `currentTime: 0` — frozen at its *from*
+value, which is the previous colour. Setting `transition-property: none` snapped the computed
+value to `#1c1917` immediately.
+
+**The general form, because this app is now full of the trap:** every one of these controls
+carries `transition-colors`, so **every colour assertion in the app is a reading of a
+transition rather than of a resolved style**. Assert the class, or kill the transition before
+measuring. A fresh element carrying the same class computing correctly is the test that
+separates "the stylesheet is wrong" from "this element is mid-transition" — and it was three
+wrong hypotheses in before that test got run.
+
+**Third instrument failure in two sessions**, after a person id recalled instead of looked up
+and a container width mistaken for a viewport (#28). All three were caught by re-checking; not
+one was caught by being careful. **The pattern is that a measurement which merely looks
+plausible gets believed**, and the defence is not care — it is a second instrument that would
+have to fail in the same direction.

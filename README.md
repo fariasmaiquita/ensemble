@@ -32,7 +32,8 @@ client component.
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · deployed on Vercel.
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS 4 · Phosphor icons · deployed
+on Vercel.
 
 No accounts, no backend, no database — watch state lives in `localStorage`, and moves
 between browsers as an exported file.
