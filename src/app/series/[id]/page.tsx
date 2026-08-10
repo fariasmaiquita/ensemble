@@ -5,8 +5,8 @@ import {
   type Credits,
   type SeriesStanding,
   type TvDetail,
-  airedSeasons,
   isOpenEnded,
+  seasonCensus,
   parseId,
   seriesStanding,
   standingLabel,
@@ -88,14 +88,10 @@ export default async function SeriesPage({ params }: PageProps<"/series/[id]">) 
         ? `${first}–${last}`
         : first;
 
-  // The seasons whose episode counts are fact rather than announcement. Both the roll-up
-  // and the Finished control work from this, so neither can claim an episode that has not
-  // gone out yet.
-  const vouched = airedSeasons(series);
-  const census = vouched.map((s) => ({
-    season: s.season_number,
-    episodes: s.episode_count,
-  }));
+  // Counted by what has aired rather than what is announced. The roll-up, the Finished
+  // control and "everything before" all work from this, so none of them can claim an
+  // episode that has not gone out yet.
+  const census = seasonCensus(series);
 
   const seasons = `${series.number_of_seasons} ${
     series.number_of_seasons === 1 ? "season" : "seasons"
@@ -175,7 +171,7 @@ export default async function SeriesPage({ params }: PageProps<"/series/[id]">) 
           seriesId={series.id}
           seriesName={series.name}
           seasons={series.seasons}
-          confirmable={vouched.map((s) => s.season_number)}
+          lastAired={series.last_episode_to_air}
         />
 
         <CastList cast={series.credits?.cast ?? []} />

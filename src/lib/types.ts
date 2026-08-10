@@ -133,6 +133,21 @@ export interface TvDetail {
   vote_count: number;
   created_by: { id: number; name: string }[];
   seasons: Season[];
+  /**
+   * The most recent episode to have gone out, anywhere in the run. `null` before a series
+   * has broadcast anything.
+   *
+   * This is the only field on the response that says where the airing has actually reached,
+   * and it costs nothing — see `airedInSeason`, which is built entirely on it.
+   */
+  last_episode_to_air: EpisodeMarker | null;
+  next_episode_to_air: EpisodeMarker | null;
+}
+
+export interface EpisodeMarker {
+  season_number: number;
+  episode_number: number;
+  air_date: string | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -227,35 +242,46 @@ export function hasAired(episode: Episode, on: string = today()): boolean {
 }
 
 /**
- * The seasons whose episode counts the app is willing to treat as fact.
+ * How many episodes of a season have actually gone out.
  *
- * `episode_count` is the number of episodes TMDB has *announced*, not the number that have
- * aired — measured, not assumed: on 2026-08-10 Lioness season 3 reported eight episodes with
- * two broadcast. So a count is only usable where nothing about the season is still in the
- * future, and two separate tests are needed because they catch different things:
+ * `episode_count` is the number of episodes TMDB has *announced*, which is not the same
+ * number and must never be used in its place — measured, not assumed: on 2026-08-10 Lioness
+ * season 3 reported eight episodes with two broadcast.
  *
- * - **A season that has not started** — Reacher's fourth premieres in two days, Silo's has no
- *   date and no episodes at all — is caught by its air date.
- * - **A season part-way through its run** has an air date safely in the past and is caught by
- *   nothing except being the newest season of a series still in production.
+ * `last_episode_to_air` is the whole answer, and it is already on the series response. Where
+ * the airing has reached tells you everything: seasons before it are complete, seasons after
+ * it have not started, and the season it falls in has aired exactly that many.
  *
- * The result under-claims by design. Excluding a season the app cannot vouch for costs a
- * viewer a few ticks; including one would have the app record episodes that do not exist yet
- * in the user's own export.
+ * **Rejected: inferring it from air dates.** A season only carries its *premiere* date, so
+ * the first attempt vouched for any season whose successor existed and whose own date had
+ * passed. It was wrong on real data in both directions — it vouched for Silo's third season
+ * while four of its ten episodes were still to come, because an announced fourth season made
+ * the third look settled; and refusing to vouch for the newest season of a running show
+ * withheld Reacher's third, which finished in March 2025. A premiere date cannot tell you
+ * when a run ended, and no amount of arithmetic over premiere dates fixes that.
  */
-export function airedSeasons(series: TvDetail, on: string = today()): Season[] {
-  const open = isOpenEnded(seriesStanding(series.status));
-  const newest = Math.max(
-    ...series.seasons.filter((s) => s.season_number !== 0).map((s) => s.season_number),
-    0,
-  );
+export function airedInSeason(season: Season, last: EpisodeMarker | null): number {
+  if (!last) return 0;
+  if (season.season_number < last.season_number) return season.episode_count;
+  if (season.season_number > last.season_number) return 0;
+  return Math.min(last.episode_number, season.episode_count);
+}
 
-  return series.seasons.filter((season) => {
-    if (season.episode_count === 0) return false;
-    if (!season.air_date || season.air_date > on) return false;
-    if (open && season.season_number === newest) return false;
-    return true;
-  });
+/**
+ * Every season with something to tick, counted by what exists rather than what is announced.
+ *
+ * This is what the roll-up, the Finished control and "everything before" all work from, so
+ * none of them can reach an episode that has not been broadcast. A series still in
+ * production is additionally capped at "watching" by `derivedStatus` — the census says what
+ * exists, and the cap says that having seen all of it is still not finishing it.
+ */
+export function seasonCensus(series: TvDetail): { season: number; episodes: number }[] {
+  return series.seasons
+    .map((season) => ({
+      season: season.season_number,
+      episodes: airedInSeason(season, series.last_episode_to_air),
+    }))
+    .filter((entry) => entry.episodes > 0);
 }
 
 /* -------------------------------------------------------------------------- */
