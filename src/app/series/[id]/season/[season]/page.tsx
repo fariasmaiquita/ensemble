@@ -5,9 +5,9 @@ import { tmdb, TmdbError } from "@/lib/tmdb";
 import {
   type SeasonDetail,
   type TvDetail,
-  airedSeasons,
   formatDate,
   parseId,
+  seasonCensus,
   seriesHref,
   seasonHref,
   year,
@@ -72,10 +72,7 @@ export default async function SeasonPage({
   const { id, season } = await params;
   const { series, detail } = await getSeason(id, season);
 
-  const census = airedSeasons(series).map((s) => ({
-    season: s.season_number,
-    episodes: s.episode_count,
-  }));
+  const census = seasonCensus(series);
 
   // Ordered rather than trusted: TMDB lists seasons in order today, and neighbouring pages
   // would silently swap if it ever stopped.

@@ -8,14 +8,20 @@ import {
   subscribe,
   watchedInSeason,
 } from "@/lib/library";
-import { type Season, seasonHref, today, year } from "@/lib/types";
+import {
+  type EpisodeMarker,
+  type Season,
+  airedInSeason,
+  seasonHref,
+  year,
+} from "@/lib/types";
 
 interface SeasonIndexProps {
   seriesId: number;
   seriesName: string;
   seasons: Season[];
-  /** Season numbers the app will vouch for as fully aired — see `airedSeasons`. */
-  confirmable: number[];
+  /** Where the broadcast has reached, which is what makes a denominator honest. */
+  lastAired: EpisodeMarker | null;
 }
 
 /**
@@ -30,7 +36,7 @@ export function SeasonIndex({
   seriesId,
   seriesName,
   seasons,
-  confirmable,
+  lastAired,
 }: SeasonIndexProps) {
   const library = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const known = useSyncExternalStore(subscribe, alwaysTrue, alwaysFalse);
@@ -50,12 +56,14 @@ export function SeasonIndex({
             : 0;
 
           /*
-           * A season still going to air shows what you have watched but no denominator.
-           * `episode_count` counts announced episodes, not broadcast ones, so "3 of 8" on a
-           * season two episodes into its run states something false about six of them —
-           * which is the same objection #17 raises to rendering an announcement like a film.
+           * The denominator is what has aired, never `episode_count`. "3 of 8" on a season
+           * two episodes into its run states something false about six of them, which is the
+           * objection #17 raises to rendering an announcement like a film. A part-aired
+           * season says so in the count itself — "1 of 2 aired" — rather than dropping the
+           * denominator and leaving the reader to wonder what happened to it.
            */
-          const vouched = confirmable.includes(season.season_number);
+          const aired = airedInSeason(season, lastAired);
+          const partial = aired < season.episode_count;
           const first = year(season.air_date);
 
           return (
@@ -76,11 +84,11 @@ export function SeasonIndex({
                     ? `${season.episode_count} ${
                         season.episode_count === 1 ? "episode" : "episodes"
                       }`
-                    : vouched
-                      ? `${watched} of ${season.episode_count}`
-                      : watched > 0
-                        ? `${watched} watched`
-                        : pendingLabel(season)}
+                    : aired === 0
+                      ? pendingLabel(season)
+                      : partial
+                        ? `${watched} of ${aired} aired`
+                        : `${watched} of ${season.episode_count}`}
                 </span>
               </Link>
             </li>
@@ -92,18 +100,15 @@ export function SeasonIndex({
 }
 
 /**
- * What to say about a season with no trustworthy denominator, in place of a count.
+ * What to say about a season with nothing aired, in place of a count.
  *
- * Three different things get excluded from the census and they are not the same news:
- * a season TMDB has announced with no episodes yet, one with a premiere still to come, and
- * one broadcasting week by week right now. Collapsing them into one word would be the
- * cheaper thing to write and would tell the reader least at the moment they most want to
- * know why the number is missing.
+ * Two different things arrive here and they are not the same news: a season TMDB has
+ * announced without knowing its episodes, and one with a full running order and a premiere
+ * still to come. Collapsing them into one word is the cheaper thing to write and tells the
+ * reader least at the moment they most want to know why the number is missing.
  */
 function pendingLabel(season: Season): string {
-  if (season.episode_count === 0) return "Announced";
-  if (season.air_date && season.air_date > today()) return "Not yet aired";
-  return "Airing now";
+  return season.episode_count === 0 ? "Announced" : "Not yet aired";
 }
 
 function alwaysTrue() {

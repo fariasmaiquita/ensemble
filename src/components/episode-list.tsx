@@ -118,7 +118,14 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
                       type="button"
                       disabled={!known}
                       onClick={() => markThrough(seriesId, season, number, census)}
-                      className="label text-ink-faint hover:text-ink ml-3 cursor-pointer opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 disabled:cursor-default"
+                      /*
+                       * Revealed on hover on a pointer device, and permanently visible where
+                       * there is no hover to reveal it with. A touch user has no way to
+                       * discover a control that only exists during a state their device
+                       * cannot enter — which would have made the one affordance that turns
+                       * this from a demo into a tracker reachable on desktop only.
+                       */
+                      className="label text-ink-faint hover:text-ink ml-3 cursor-pointer opacity-0 transition-opacity group-hover/row:opacity-100 focus-visible:opacity-100 disabled:cursor-default [@media(hover:none)]:opacity-100"
                     >
                       and everything before
                     </button>

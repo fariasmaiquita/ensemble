@@ -899,3 +899,142 @@ honest than pretending the click did not happen.
 page: once a library is visible somewhere other than the page that created it, the question
 stops being asked. Reassurance per action is what an app reaches for when it has nowhere to
 show you the whole of what it knows.
+
+---
+
+## 38. Two claims about a series, and the app shows the higher of them
+
+**2026-08-10.** Episode progress lands in its own map keyed by series id — `progress`, beside
+`entries`, exactly as #35 committed to — and **rolls up into the three title-level statuses
+rather than replacing them.** A series therefore carries two claims at once: `entry.status`,
+which is what you said, and a status derived from the episodes you ticked. What the app shows
+is the higher of the two, ranked want < watching < watched.
+
+**That one line is the whole of "promote-only", and it is why there is no second stored
+field.** A status set by hand is never lowered by episode activity, because it remains one of
+the two candidates. A status you never set follows the grid freely in both directions, because
+the other candidate is `null`. Un-ticking an episode drops you back to whatever you actually
+claimed instead of stranding you on a Finished the grid no longer supports.
+
+**Rejected: writing the rolled-up status through into `entry.status` at tick time.** It is the
+obvious implementation and it is what the `refreshRef` precedent suggests. It loses the
+distinction between claimed and derived permanently, which means un-ticking cannot fall back
+to anything — the two facts have already been flattened into one. The cost of computing
+instead is that **the roll-up needs the season counts, which are the world's data**, so it can
+only be computed where those are to hand.
+
+**The consequence, stated rather than discovered later:** the home page will need a census to
+show a rolled-up status, and it does not have one. This is the same shape as #30's admission
+that common actors cannot be server-rendered, and it is deliberately left to the home-page
+block rather than solved early by storing episode counts in the library — which is precisely
+what #32 refuses.
+
+**No migration, and version stays 1.** `progress` is optional on read, so every library
+written before this block parses as a library with no episodes rather than one that fails.
+Bumping the version would have meant either a migration or silently discarding the one real
+user's data.
+
+---
+
+## 39. A series still in production cannot be finished, however much of it you have seen
+
+**2026-08-10.** The roll-up caps an open-ended series at *Watching*. Watching every episode of
+a running show never derives *Finished*.
+
+This is #15's argument applied to progress. The distinction that whole decision rests on is
+between a story that ended and one that was cut off; a series with more coming has not ended,
+and saying otherwise is the same class of false statement #17 refuses when it declines to
+render a 2028 announcement like a 1994 film.
+
+**The cap is written explicitly rather than left to fall out of the arithmetic**, and that is
+the load-bearing part. A season TMDB has not published yet is simply absent from the census —
+so "every season complete" is *satisfiable* by someone merely caught up, and the arithmetic
+alone would have told them they had finished something still in production. Verified against
+Lioness: eighteen episodes watched, every one that has aired, and the band reads Watching.
+
+**Rejected: a fourth status for "caught up".** #35 committed to three statuses that episode
+data rolls up into, and a fourth stored value would break the join it promised. What the page
+says instead is the count — *"Watching because 18 episodes are marked watched"* — which is the
+same information without a new state to store, export and explain.
+
+---
+
+## 40. Where the broadcast has reached, not how many episodes were announced
+
+**2026-08-10.** Every count in this feature — the roll-up's denominator, what the Finished
+control fills, how far "everything before" reaches — is derived from `last_episode_to_air`,
+which is already on the series response and costs nothing.
+
+**`episode_count` is the announced count, not the aired one, and using it is a bug.** Measured,
+not assumed: on 2026-08-10 Lioness season three reported eight episodes with two broadcast.
+Marking that season watched off `episode_count` would have recorded six episodes that did not
+exist yet **into the user's own export**, and reported a finished series six weeks early.
+
+**Rejected: inferring it from air dates, which is what shipped first and was wrong on real
+data in both directions.** A season carries only its *premiere* date, so the first rule
+vouched for any season whose own date had passed unless it was the newest season of a running
+show. That vouched for **Silo's third season while four of its ten episodes were still to
+come**, because an announced fourth season made the third look settled; and it withheld
+**Reacher's third, which finished in March 2025**, for being newest. A premiere date cannot
+tell you when a run *ended*, and no arithmetic over premiere dates repairs that.
+
+**The failure is worth keeping because of how it was found.** The rule passed nineteen checks
+written against the three shows it had been designed around. It broke on the fourth show
+looked at, and only because the season index printed a denominator that could be read against
+TMDB directly. **A check written from the same examples as the rule tests the examples, not the
+rule.**
+
+---
+
+## 41. A season page is a checklist, not something to read
+
+**2026-08-10.** Episode rows carry number, title, air date and runtime. No synopsis.
+
+**Rejected: the synopsis, which is what every season page shows.** This is the screen where
+you record what you have already seen, so every row below your place is an episode you have
+not watched — and putting a plot summary on it makes the page that exists to track a series
+the page most likely to spoil it.
+
+**Rejected more specifically: showing synopses only for watched episodes**, which was the
+obvious repair and is worse. Rows that grow as they are ticked make the list shift under the
+cursor doing the ticking, so the fix for a content problem creates an interaction one.
+
+**Unaired episodes are listed but cannot be ticked, and the page says how many and why.**
+Hiding them would misrepresent the length of a season; leaving a disabled control unexplained
+is #23's withheld-credit problem again — a disabled thing with no reason attached is
+indistinguishable from a broken one. The disabled controls carry no `aria-pressed` at all
+rather than `false`, on #31's grounds.
+
+**"And everything before" reaches across seasons rather than stopping at the current one.**
+Nobody starts recording at S1E1; they start at whatever they are watching tonight, and the
+alternative is forty checkboxes. Later seasons are deliberately untouched: marking S4E2 says
+where you are, not that you never saw season five. It is also **permanently visible where
+there is no hover**, since a control that only exists during a state a touch device cannot
+enter is a control that does not exist on that device.
+
+---
+
+## 42. Finishing a series fills the grid; un-finishing it does not empty the grid
+
+**2026-08-10.** Marking a series *Finished* also marks every episode the census vouches for,
+so the band and the season list cannot disagree about a series you said you finished. It fills
+only what has aired — a season still going out is left alone rather than invented.
+
+**Clearing the status deliberately does not reverse the fill.** The asymmetry is the decision.
+"I have not finished this" and "I have seen none of it" are different statements, and deleting
+sixty-two ticks to express the first would assert the second.
+
+**That leaves one state where clearing a status cannot clear it:** with every episode ticked,
+the grid goes on implying *Finished* after the claim is gone, so the control stays lit and the
+click looks dead. Rather than delete the ticks or leave it unexplained, the band says which
+fact is holding it — *"Finished because 62 episodes are marked watched"* — and offers the one
+action that changes it. Same obligation as #37: the thing that would otherwise be silent is
+the thing to say out loud.
+
+**Rejected: letting the two disagree quietly**, i.e. a band reading Finished above a list
+reading 3 of 62 with nothing connecting them. That is the state the fill exists to prevent,
+and it is the one an export would carry into a file nobody can interrogate.
+
+**Specials are excluded throughout** — from the fill, from "everything before", and from the
+roll-up's denominator. Breaking Bad has nine of them; counting them would mean nobody ever
+finishes it. TMDB agrees, and its own `number_of_episodes` excludes season 0.
