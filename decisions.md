@@ -740,11 +740,25 @@ mark and a tick with no labels are a guess, and this is the app that keeps chara
 a cast list (#16) because the words are the content. The column costs about 20px more than the
 ragged wrap and reads as a checklist in a printed programme.
 
-**Rejected: the spot colour for an active control.** A filled heart in the accent would mark
-favouriting as the important act, and it is. But the accent already means two things — a
-cancelled series (#15) and a franchise's sequence number (#19) — and a third meaning is how a
-single spot colour stops being one. Active controls take plain ink and lean on Phosphor's fill
-weight instead. One line to reverse.
+**Active controls take the spot colour — decided against, then reversed the same day by the
+first person to use it.** Both halves belong here, because the reversal is the useful part.
+
+The original call was plain ink. A filled heart in the accent would mark favouriting as the
+important act, which it is, but the accent already means two things — a cancelled series (#15)
+and a franchise's sequence number (#19) — and a third meaning is how a single spot colour
+stops being one.
+
+**Farias's reaction on first use was that he could not tell his click had been saved.** The
+literal request was a confirmation — a toast, a tick, something acknowledging the write. That
+was refused (#37). But the underlying complaint was not about persistence at all: faint grey
+to near-black with a fill-weight change is a *quiet* transition, and "did that register" is
+precisely the symptom of an under-emphatic active state. **The colour argument was reasoning
+about the palette; his was evidence about the interface, and evidence wins.**
+
+**The cost predicted by the original call is real and now visible:** on a cancelled series the
+standing and both active controls are the same rust, so *Cancelled* no longer owns the colour
+on that page. Accepted knowingly. If the palette has to give somewhere, it gives on a warning
+the user has already read rather than on the feedback for the thing they just did.
 
 ---
 
@@ -785,6 +799,13 @@ of three statuses, and episode data will land in its own map keyed by series id 
 into those three values rather than replacing them. **A film has only two statuses**, because
 a film has no middle.
 
+**Moved ahead of the home page, 2026-08-10, by the person using it.** Farias marked a series
+as *Watching* and looked for somewhere to say which episodes — there is nowhere. **Splitting
+the block left the app in a state where it invites a claim it cannot let you finish**, which
+is a worse resting point than either "no series tracking" or "full episode tracking", and I
+did not weigh that when I proposed the split. The split itself still stands; only the order
+changed.
+
 ---
 
 ## 36. A frozen transition read as a bug
@@ -810,3 +831,45 @@ and a container width mistaken for a viewport (#28). All three were caught by re
 one was caught by being careful. **The pattern is that a measurement which merely looks
 plausible gets believed**, and the defence is not care — it is a second instrument that would
 have to fail in the same direction.
+
+---
+
+## 37. The failure is announced; the success is not
+
+**2026-08-10.** When the browser refuses to persist, the band says so in words. When a write
+succeeds, nothing is announced at all.
+
+**The asymmetry is the decision.** Writing to `localStorage` is synchronous — it completes
+before the screen repaints, or it throws. So there is no in-flight moment for a "saving…"
+state to occupy, and a control that has visibly changed **has already saved**. A confirmation
+after the fact would be acknowledging something the interface has already proved.
+
+**Rejected: a toast on save**, which is what was asked for and what every app does. It is a
+pattern that exists because *network* writes fail and take time; neither is true here.
+Borrowing it would add a storefront gesture to a page arguing it is a reference book, and it
+would train the reader to expect an acknowledgement everywhere one is not needed. **Deferred
+rather than killed** — Farias may want to revisit it once the app has been lived in, and the
+place it would earn itself is export/import, where the write really is slow and really can
+fail.
+
+**What was actually broken was the opposite case, and it was invisible.** A blocked
+`localStorage` — private mode, an exhausted quota, storage switched off — threw, was caught,
+and went to `console.warn`. The click still registered, the icon still filled, and nothing was
+written. **Identical to success, from the only vantage point that matters.** That is the same
+obligation as #23's withheld-credit count: a state that silently misrepresents itself is
+indistinguishable from a broken one, and the reader cannot tell which they are looking at.
+
+**Verified by making the browser refuse.** With `setItem` throwing, the message appears, the
+control still reflects the click, and the stored value provably does *not* change — it stayed
+on the previous status while the interface showed the new one, which is exactly the divergence
+the sentence is there to disclose. It clears again on the first write that succeeds.
+
+**The in-memory state deliberately keeps the click.** Reverting the control on a failed write
+would be more truthful about storage and worse for the person, who would watch their input
+vanish with no explanation. Saying "this will not be remembered after you leave" is more
+honest than pretending the click did not happen.
+
+**The structural answer to "is my data really saved" is not here anyway.** It is the home
+page: once a library is visible somewhere other than the page that created it, the question
+stops being asked. Reassurance per action is what an app reaches for when it has nowhere to
+show you the whole of what it knows.

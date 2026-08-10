@@ -13,6 +13,8 @@ import {
   getEntry,
   getServerSnapshot,
   getSnapshot,
+  getStorageBlocked,
+  getStorageBlockedServer,
   refreshRef,
   setStatus,
   statusLabel,
@@ -52,6 +54,11 @@ export function LibraryControls(props: TitleRef) {
    * client snapshot `true`, resolved in the same pass as the data.
    */
   const known = useSyncExternalStore(subscribe, alwaysTrue, alwaysFalse);
+  const blocked = useSyncExternalStore(
+    subscribe,
+    getStorageBlocked,
+    getStorageBlockedServer,
+  );
 
   const entry = getEntry(library, kind, id);
 
@@ -100,7 +107,7 @@ export function LibraryControls(props: TitleRef) {
               // "remove" affordance to design or explain.
               onClick={() => setStatus(props, active ? null : status)}
               className={`label flex cursor-pointer items-center gap-2 transition-colors disabled:cursor-default ${
-                active ? "text-ink" : "text-ink-faint hover:text-ink-muted"
+                active ? "text-accent" : "text-ink-faint hover:text-ink-muted"
               }`}
             >
               <IconFor size={17} weight={active ? "fill" : "regular"} aria-hidden />
@@ -124,7 +131,7 @@ export function LibraryControls(props: TitleRef) {
         onClick={() => toggleFavourite(props)}
         className={`label flex cursor-pointer items-center gap-2 transition-colors disabled:cursor-default ${
           known && entry?.favourite
-            ? "text-ink"
+            ? "text-accent"
             : "text-ink-faint hover:text-ink-muted"
         }`}
       >
@@ -135,6 +142,22 @@ export function LibraryControls(props: TitleRef) {
         />
         Favourite
       </button>
+
+      {/*
+        The one case where a filled mark is not the truth.
+
+        Writing is synchronous, so a control that has filled in has already saved — which is
+        why there is no "saving…" state here and no confirmation after the fact. The failure
+        is the part that needed saying: when the browser refuses to persist, the click still
+        registers, the icon still fills, and nothing is written. Silently, and identically to
+        success. Saying so is the same obligation as #23's withheld-credit count.
+      */}
+      {blocked ? (
+        <p className="text-meta text-ink-muted basis-full italic">
+          Not saved — this browser is blocking storage, so nothing here will be remembered
+          after you leave.
+        </p>
+      ) : null}
     </div>
   );
 }
