@@ -58,20 +58,10 @@ export async function tmdb<T>(
 }
 
 /**
- * Poster and profile URLs.
+ * Image URLs live in `images.ts` and are re-exported here.
  *
- * TMDB serves images from a separate CDN host with fixed width buckets; asking for
- * an arbitrary size returns nothing, so the sizes here are the real supported ones.
+ * They were defined in this file until the home page needed them in a client component,
+ * where importing this module fails the build by design. Building a CDN URL needs no token,
+ * so the code moved rather than the guard.
  */
-const IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
-
-export type PosterSize = "w185" | "w342" | "w500" | "original";
-export type ProfileSize = "w185" | "h632" | "original";
-
-export function posterUrl(path: string | null, size: PosterSize = "w342"): string | null {
-  return path ? `${IMAGE_BASE_URL}/${size}${path}` : null;
-}
-
-export function profileUrl(path: string | null, size: ProfileSize = "w185"): string | null {
-  return path ? `${IMAGE_BASE_URL}/${size}${path}` : null;
-}
+export { type PosterSize, type ProfileSize, posterUrl, profileUrl } from "./images";

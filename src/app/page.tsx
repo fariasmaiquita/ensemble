@@ -2,9 +2,14 @@ import { tmdb, TmdbError } from "@/lib/tmdb";
 import type { MultiSearchResult, Paginated } from "@/lib/types";
 import { Masthead, SearchField } from "@/components/masthead";
 import { ResultRow } from "@/components/result-row";
+import { HomeLibrary } from "@/components/home-library";
 
 /**
  * Search state lives in the URL rather than in component state — see decisions.md #5.
+ *
+ * With no query, this is the library page: sections computed from what you have marked,
+ * joined to what TMDB knows about it. Nothing on it comes from what anyone else is
+ * watching, which is the rule the whole page was designed to.
  */
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
@@ -14,17 +19,8 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     <div className="mx-auto w-full max-w-3xl px-6 pb-24 sm:px-8">
       <Masthead />
       <SearchField query={query} />
-      {query ? <Results query={query} /> : <Premise />}
+      {query ? <Results query={query} /> : <HomeLibrary />}
     </div>
-  );
-}
-
-function Premise() {
-  return (
-    <p className="text-body text-ink-muted max-w-md pt-10 italic">
-      Every film in a franchise in one place. The faces that recur across what you love.
-      Whether a series is still running before you start it.
-    </p>
   );
 }
 

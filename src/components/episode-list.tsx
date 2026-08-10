@@ -5,6 +5,7 @@ import { CheckCircle } from "@phosphor-icons/react/dist/csr/CheckCircle";
 import { Circle } from "@phosphor-icons/react/dist/csr/Circle";
 import {
   type SeasonCensus,
+  type TitleRef,
   getServerSnapshot,
   getSnapshot,
   markThrough,
@@ -16,7 +17,11 @@ import {
 import { type Episode, formatDate, formatRuntime, hasAired } from "@/lib/types";
 
 interface EpisodeListProps {
-  seriesId: number;
+  /**
+   * The series itself, not just its id: ticking an episode records the series in your
+   * library, and a row without a label is an id nobody can read back.
+   */
+  series: TitleRef;
   season: number;
   episodes: Episode[];
   /** Confirmable seasons, so "everything before this" can reach back past this one. */
@@ -35,7 +40,8 @@ interface EpisodeListProps {
  * So the row carries what decides "was this the one" without spoiling it — number, title,
  * when it went out, how long it ran.
  */
-export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListProps) {
+export function EpisodeList({ series, season, episodes, census }: EpisodeListProps) {
+  const seriesId = series.id;
   const library = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const known = useSyncExternalStore(subscribe, alwaysTrue, alwaysFalse);
 
@@ -62,7 +68,7 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
             type="button"
             disabled={!known}
             onClick={() =>
-              setSeasonWatched(seriesId, season, allAiredWatched ? [] : airedNumbers)
+              setSeasonWatched(series, season, allAiredWatched ? [] : airedNumbers)
             }
             className="label text-ink-faint hover:text-ink cursor-pointer transition-colors disabled:cursor-default"
           >
@@ -100,7 +106,7 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
                     aria-label={`${
                       isWatched ? "Mark unwatched" : "Mark watched"
                     }: episode ${number}, ${episode.name}`}
-                    onClick={() => setEpisodeWatched(seriesId, season, number, !isWatched)}
+                    onClick={() => setEpisodeWatched(series, season, number, !isWatched)}
                     className={`shrink-0 translate-y-0.5 cursor-pointer transition-colors disabled:cursor-default ${
                       isWatched ? "text-ink" : "text-ink-faint hover:text-ink-muted"
                     }`}
@@ -152,7 +158,7 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
                     <button
                       type="button"
                       disabled={!known}
-                      onClick={() => markThrough(seriesId, season, number, census)}
+                      onClick={() => markThrough(series, season, number, census)}
                       /*
                        * Revealed on hover on a pointer device, and permanently visible where
                        * there is no hover to reveal it with. Farias found it on a first pass

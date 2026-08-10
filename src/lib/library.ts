@@ -120,7 +120,32 @@ function isKind(value: unknown): value is TitleKind {
   return value === "film" || value === "series";
 }
 
-function parseEntry(key: string, value: unknown): LibraryEntry | null {
+/**
+ * Whether an entry records anything at all about the user.
+ *
+ * **The third clause was missing until the home page went looking for rows and could not
+ * find them.** The original rule — no status and no favourite means no fact — was written
+ * before episode progress existed, and stopped being true the moment it did: eleven ticked
+ * episodes of a series you never got round to labelling is emphatically a fact about you,
+ * and is precisely the fact the roll-up (#38) exists to turn into a status.
+ *
+ * It is asked of the library rather than of the row, because progress lives in its own map
+ * beside `entries` (#35) and a row cannot see it.
+ */
+function isEmptyEntry(
+  entry: Pick<LibraryEntry, "kind" | "id" | "status" | "favourite">,
+  progress: Record<string, SeriesProgress>,
+): boolean {
+  if (entry.status !== null || entry.favourite) return false;
+  if (entry.kind !== "series") return true;
+  return Object.keys(progress[String(entry.id)] ?? {}).length === 0;
+}
+
+function parseEntry(
+  key: string,
+  value: unknown,
+  progress: Record<string, SeriesProgress>,
+): LibraryEntry | null {
   if (typeof value !== "object" || value === null) return null;
   const raw = value as Record<string, unknown>;
 
@@ -132,8 +157,7 @@ function parseEntry(key: string, value: unknown): LibraryEntry | null {
 
   const status = isStatus(raw.status) ? raw.status : null;
   const favourite = raw.favourite === true;
-  // An entry recording neither a status nor a favourite is not a fact about the user.
-  if (status === null && !favourite) return null;
+  if (isEmptyEntry({ kind: raw.kind, id: raw.id, status, favourite }, progress)) return null;
   if (status !== null && !STATUSES[raw.kind].includes(status)) return null;
 
   return {
@@ -211,16 +235,13 @@ export function parseLibrary(source: string | null): Library {
   if (raw.version !== VERSION) return EMPTY;
   if (typeof raw.entries !== "object" || raw.entries === null) return EMPTY;
 
-  const entries: Record<string, LibraryEntry> = {};
-  for (const [key, value] of Object.entries(raw.entries as Record<string, unknown>)) {
-    const entry = parseEntry(key, value);
-    if (entry) entries[key] = entry;
-  }
-
   /*
    * `progress` is optional rather than required, and that is the whole no-migration
    * promise: every library written before this block has no such key, and reads as a
    * library with no episodes rather than as a library that fails to parse.
+   *
+   * **Parsed before the entries**, because whether an entry records anything now depends on
+   * whether that series has episodes ticked.
    */
   const progress: Record<string, SeriesProgress> = {};
   if (typeof raw.progress === "object" && raw.progress !== null) {
@@ -231,6 +252,12 @@ export function parseLibrary(source: string | null): Library {
       const seasons = parseProgress(value);
       if (seasons) progress[key] = seasons;
     }
+  }
+
+  const entries: Record<string, LibraryEntry> = {};
+  for (const [key, value] of Object.entries(raw.entries as Record<string, unknown>)) {
+    const entry = parseEntry(key, value, progress);
+    if (entry) entries[key] = entry;
   }
 
   return { version: VERSION, entries, progress };
@@ -309,7 +336,21 @@ function write(
   entries: Record<string, LibraryEntry>,
   progress: Record<string, SeriesProgress> = getSnapshot().progress,
 ) {
-  const next: Library = { version: VERSION, entries, progress };
+  /*
+   * Pruning happens here, once, rather than at each of the five call sites that can empty a
+   * row — because it went wrong exactly that way. `update` deleted an entry the moment its
+   * status and favourite were both gone, without knowing that the same series might have
+   * eleven episodes ticked, and none of the episode writers considered entries at all.
+   *
+   * Whether a row is worth keeping depends on both maps, and this is the only place that
+   * holds both at the moment they change.
+   */
+  const kept: Record<string, LibraryEntry> = {};
+  for (const [key, entry] of Object.entries(entries)) {
+    if (!isEmptyEntry(entry, progress)) kept[key] = entry;
+  }
+
+  const next: Library = { version: VERSION, entries: kept, progress };
   // The in-memory cache is updated first and unconditionally: if persistence fails, the
   // click the user just made still stands for the rest of the session rather than
   // springing back with no explanation.
@@ -324,11 +365,11 @@ function write(
 }
 
 /**
- * Entries are created on demand and removed the moment they hold nothing.
+ * Entries are created on demand, and removed by `write` the moment they hold nothing.
  *
- * An entry with no status and no favourite is a row that records the user did nothing,
- * and leaving those behind means an exported file is mostly a list of pages someone
- * happened to open.
+ * A row recording that the user did nothing is not worth exporting — but "nothing" now
+ * includes the episode map, so the decision is no longer this function's to make. It writes
+ * what the change says and lets `write` decide whether the result is worth keeping.
  */
 function update(ref: TitleRef, change: Partial<Pick<LibraryEntry, "status" | "favourite">>) {
   const key = titleKey(ref.kind, ref.id);
@@ -339,15 +380,32 @@ function update(ref: TitleRef, change: Partial<Pick<LibraryEntry, "status" | "fa
   const favourite =
     change.favourite !== undefined ? change.favourite : (existing?.favourite ?? false);
 
-  if (status === null && !favourite) {
-    delete entries[key];
-  } else {
-    // Display fields come from the ref every time, so the label refreshes whenever the
-    // user is on a page that knows the current one.
-    entries[key] = { ...ref, status, favourite, updatedAt: new Date().toISOString() };
-  }
+  // Display fields come from the ref every time, so the label refreshes whenever the
+  // user is on a page that knows the current one.
+  entries[key] = { ...ref, status, favourite, updatedAt: new Date().toISOString() };
 
   write(entries);
+}
+
+/**
+ * Put a series in the library because you ticked something in it.
+ *
+ * Ticking an episode is an act, and the app used to record it in a way no page could show:
+ * `progress` gained a key and `entries` gained nothing, so a series tracked purely by
+ * episode never appeared in the library at all — and an export of it was a bare id with no
+ * title, which is the one thing #32 stores labels to prevent.
+ *
+ * An existing row is left alone, `updatedAt` included: the episode writers move their own
+ * timestamps, and a status set last month should not look like it was set just now.
+ */
+function withSeries(entries: Record<string, LibraryEntry>, ref: TitleRef) {
+  const key = titleKey(ref.kind, ref.id);
+  if (entries[key]) return entries;
+
+  return {
+    ...entries,
+    [key]: { ...ref, status: null, favourite: false, updatedAt: new Date().toISOString() },
+  };
 }
 
 export function setStatus(ref: TitleRef, status: WatchStatus | null) {
@@ -356,6 +414,38 @@ export function setStatus(ref: TitleRef, status: WatchStatus | null) {
 
 export function toggleFavourite(ref: TitleRef) {
   update(ref, { favourite: !getEntry(getSnapshot(), ref.kind, ref.id)?.favourite });
+}
+
+/**
+ * Write a whole library at once, replacing what is there.
+ *
+ * Exists for the example library the home page offers an empty install, and is the
+ * operation import will need when it arrives — which is why it takes a parsed `Library`
+ * rather than a string, leaving the file-reading and the validation on the other side of
+ * the boundary `parseLibrary` already draws.
+ */
+export function replaceLibrary(library: Library) {
+  write({ ...library.entries }, { ...library.progress });
+}
+
+/**
+ * Remove named titles and everything recorded about them.
+ *
+ * Written in terms of *which* titles rather than as a clear-everything, because the one
+ * caller is the button that removes the example library, and someone who has since added
+ * titles of their own should keep them. Removing the example should remove the example.
+ */
+export function removeTitles(keys: string[]) {
+  const entries = { ...getSnapshot().entries };
+  const progress = { ...getSnapshot().progress };
+
+  for (const key of keys) {
+    delete entries[key];
+    const [kind, id] = key.split(":");
+    if (kind === "series" && id) delete progress[id];
+  }
+
+  write(entries, progress);
 }
 
 /**
@@ -446,8 +536,8 @@ export function watchedCount(library: Library, seriesId: number): number {
  * `update` deletes empty entries: a record that says you did nothing is not a fact about
  * you, and an export full of them is a list of pages you happened to open.
  */
-function writeSeason(seriesId: number, season: number, episodes: number[]) {
-  const key = String(seriesId);
+function writeSeason(ref: TitleRef, season: number, episodes: number[]) {
+  const key = String(ref.id);
   const seasonKey = String(season);
   const progress = { ...getSnapshot().progress };
   const seasons = { ...(progress[key] ?? {}) };
@@ -464,25 +554,25 @@ function writeSeason(seriesId: number, season: number, episodes: number[]) {
     progress[key] = seasons;
   }
 
-  write(getSnapshot().entries, progress);
+  write(withSeries(getSnapshot().entries, ref), progress);
 }
 
 export function setEpisodeWatched(
-  seriesId: number,
+  ref: TitleRef,
   season: number,
   episode: number,
   watched: boolean,
 ) {
-  const current = watchedInSeason(getSnapshot(), seriesId, season);
+  const current = watchedInSeason(getSnapshot(), ref.id, season);
   writeSeason(
-    seriesId,
+    ref,
     season,
     watched ? [...current, episode] : current.filter((e) => e !== episode),
   );
 }
 
-export function setSeasonWatched(seriesId: number, season: number, episodes: number[]) {
-  writeSeason(seriesId, season, episodes);
+export function setSeasonWatched(ref: TitleRef, season: number, episodes: number[]) {
+  writeSeason(ref, season, episodes);
 }
 
 /**
@@ -498,12 +588,12 @@ export function setSeasonWatched(seriesId: number, season: number, episodes: num
  * unsaying a season five they may have watched out of order.
  */
 export function markThrough(
-  seriesId: number,
+  ref: TitleRef,
   season: number,
   episode: number,
   census: SeasonCensus[],
 ) {
-  const key = String(seriesId);
+  const key = String(ref.id);
   const progress = { ...getSnapshot().progress };
   const seasons = { ...(progress[key] ?? {}) };
 
@@ -521,12 +611,12 @@ export function markThrough(
   }
 
   if (Object.keys(seasons).length > 0) progress[key] = seasons;
-  write(getSnapshot().entries, progress);
+  write(withSeries(getSnapshot().entries, ref), progress);
 }
 
 /** Every confirmable episode of every season, specials excluded. Used by the Finished control. */
-export function fillSeries(seriesId: number, census: SeasonCensus[]) {
-  const key = String(seriesId);
+export function fillSeries(ref: TitleRef, census: SeasonCensus[]) {
+  const key = String(ref.id);
   const progress = { ...getSnapshot().progress };
   const seasons = { ...(progress[key] ?? {}) };
 
@@ -538,7 +628,7 @@ export function fillSeries(seriesId: number, census: SeasonCensus[]) {
   }
 
   if (Object.keys(seasons).length > 0) progress[key] = seasons;
-  write(getSnapshot().entries, progress);
+  write(withSeries(getSnapshot().entries, ref), progress);
 }
 
 /** Forget every episode of a series, leaving specials and the title-level status alone. */

@@ -137,7 +137,7 @@ export function LibraryControls(props: LibraryControlsProps) {
     // about a series you said you finished. It fills only what `airedSeasons` vouches for,
     // so a season still going to air is left empty rather than invented.
     if (next === "watched" && kind === "series" && census && census.length > 0) {
-      fillSeries(id, census);
+      fillSeries(ref, census);
     }
   }
 
