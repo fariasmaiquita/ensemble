@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { profileUrl } from "@/lib/tmdb";
 import { getPerson } from "@/lib/person";
-import { type CreditGroup, filmography, lifespan, personHref } from "@/lib/types";
+import { type CreditGroup, bestKnown, filmography, lifespan, personHref } from "@/lib/types";
 import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
 import { CreditList } from "@/components/credit-list";
@@ -140,23 +140,37 @@ function PreviewSection({
   const total = group.released.length;
   if (total === 0 && group.asSelf === 0) return null;
 
+  /*
+   * The reordering exists only because of the cap: it is there so that what gets cut is the
+   * obscure work rather than the famous work. A section that fits entirely on the page hides
+   * nothing, so it keeps the chronology — and stays consistent with the full pages, which
+   * are chronological too.
+   */
+  const capped = total > PREVIEW_LENGTH;
+  const preview = capped ? bestKnown(group.released, PREVIEW_LENGTH) : group.released;
+
   return (
     <section className="border-rule mt-10 border-t pt-8">
-      <h2 className="label text-ink-faint">
-        {heading}
-        {total > 0 ? ` — ${total}` : ""}
-      </h2>
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="label text-ink-faint">
+          {heading}
+          {total > 0 ? ` — ${total}` : ""}
+        </h2>
+
+        {/* The preview and the full page are ordered differently, so each says which it is. */}
+        {capped ? <span className="label text-ink-faint">Best known</span> : null}
+      </div>
 
       {total > 0 ? (
         <div className="mt-4">
-          <CreditList credits={group.released.slice(0, PREVIEW_LENGTH)} />
+          <CreditList credits={preview} />
         </div>
       ) : (
         <p className="text-meta text-ink-faint mt-4 italic">No {noun} credited.</p>
       )}
 
       <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-        {total > PREVIEW_LENGTH ? (
+        {capped ? (
           <Link href={seeAllHref} className="label text-accent hover:underline">
             See all {total} {noun} →
           </Link>
