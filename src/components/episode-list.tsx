@@ -154,18 +154,17 @@ export function EpisodeList({ seriesId, season, episodes, census }: EpisodeListP
                       disabled={!known}
                       onClick={() => markThrough(seriesId, season, number, census)}
                       /*
-                       * Permanently visible, not revealed on hover.
+                       * Revealed on hover on a pointer device, and permanently visible where
+                       * there is no hover to reveal it with. Farias found it on a first pass
+                       * without being told it was there, so the quiet version stands; a
+                       * secondary action repeated on every row of a 197-row list is noise if
+                       * it is always lit.
                        *
-                       * It was hover-only, which was quieter and hid the one affordance that
-                       * turns this from a demo into a tracker: nothing on the row suggested
-                       * it existed, so finding it depended on sweeping a cursor across text
-                       * for no reason. A control nobody discovers is not a control.
-                       *
-                       * On narrow screens it takes its own line, flush left — following the
+                       * On narrow screens it takes its own line, flush left. Following the
                        * title inline pushed it to a ragged position that read as centred and
                        * belonging to nothing.
                        */
-                      className="label text-ink-faint hover:text-ink mt-1 block cursor-pointer text-left transition-colors disabled:cursor-default sm:mt-0 sm:ml-3 sm:inline"
+                      className="label text-ink-faint hover:text-ink mt-1 block cursor-pointer text-left opacity-0 transition disabled:cursor-default group-hover/row:opacity-100 focus-visible:opacity-100 sm:mt-0 sm:ml-3 sm:inline [@media(hover:none)]:opacity-100"
                     >
                       and everything before
                     </button>

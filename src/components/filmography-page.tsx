@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
 import { type CreditGroup, personHref } from "@/lib/types";
 import { type PersonWithCredits } from "@/lib/person";
 import { Masthead, SearchField } from "@/components/masthead";
@@ -66,9 +67,10 @@ export function FilmographyPage({
         <p className="border-rule mt-10 border-t pt-8">
           <Link
             href={personHref(person.id, person.name)}
-            className="label text-accent hover:underline"
+            className="label text-accent inline-flex items-center gap-1.5 hover:underline"
           >
-            ← Back to {person.name}
+            <ArrowLeft size={13} aria-hidden />
+            Back to {person.name}
           </Link>
         </p>
       </article>

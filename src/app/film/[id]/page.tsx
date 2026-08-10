@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { tmdb, posterUrl, TmdbError } from "@/lib/tmdb";
 import {
   type Credits,
@@ -114,9 +115,10 @@ export default async function FilmPage({ params }: PageProps<"/film/[id]">) {
                 film.belongs_to_collection.id,
                 film.belongs_to_collection.name,
               )}
-              className="label text-accent hover:underline"
+              className="label text-accent inline-flex items-center gap-1.5 hover:underline"
             >
-              Part of the {franchiseName(film.belongs_to_collection.name)} franchise →
+              Part of the {franchiseName(film.belongs_to_collection.name)} franchise
+              <ArrowRight size={13} aria-hidden />
             </Link>
           </p>
         ) : null}
