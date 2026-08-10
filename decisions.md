@@ -283,6 +283,110 @@ That one still has N requests to solve and is deferred to its own block — see 
 
 ---
 
+## 22. Films and series are separate filmographies
+
+**2026-08-10.** A person's work splits into two sections — Films and Series — each carrying
+its own count and its own full page. It was one reverse-chronological list of everything.
+
+**The page was unreadable at real scale, and the numbers are the argument.** Samuel L.
+Jackson's page rendered **340 rows**; Morgan Freeman's 269; Scarlett Johansson's interleaved
+102 films with 72 television credits in one stream. A career is not one list.
+
+**Rejected: one list with a category label on each row.** Cheaper, and it preserves strict
+chronology across a whole career, which is a real thing to want. It loses to the split
+because the two are different commitments — a film is an evening, a series is a season — and
+because the app already says *Film* and *Series* everywhere else, including in the URL (#14).
+The filmography was the last surface still speaking TMDB's flat vocabulary.
+
+**Announced work stays in one section spanning both kinds.** Rejected: splitting it too, for
+symmetry. It runs to a handful of rows — two for Jackson, four for Johansson — and four
+headings to carry six rows spends page structure on the least certain material there is. It
+gets a per-row category label instead, since it is the one list where a row cannot inherit
+its category from the heading above it.
+
+---
+
+## 23. A talk-show appearance is not a credit — but a one-episode role is
+
+**2026-08-10.** Credits where the character is *Self*, *Himself* or *Herself* are held back
+from the filmography and reported as a count: **"64 appearances as themselves, not listed."**
+
+**TMDB records a Graham Norton sofa exactly as it records Walter White**, and for a working
+actor the sofas are most of the television list — 63 of Scarlett Johansson's 72 series
+credits, 42 of Bryan Cranston's 107, 64 of Jackson's 256 film credits. Nothing about the row
+says which is which except the character.
+
+**Rejected: also dropping series with fewer than two episodes**, which was the other half of
+this rule when I proposed it, and which I was confident about. Measured against real data it
+deleted **Cranston in *Babylon 5*, *3rd Rock from the Sun* and *Airwolf*, and Elijah Wood in
+*Frasier* and *Homicide: Life on the Street*.** A one-episode guest role is still a role, and
+an anthology lead appears exactly once by design. It was also simply unnecessary: the self
+test alone takes Johansson's 72 series credits to 9. **The rule survived being written down
+and died on contact with the data, which is the whole reason to measure before shipping a
+filter rather than after.**
+
+**Rejected: filtering silently.** Every place the filter runs says how much it withheld. A
+list that quietly drops two thirds of its input is indistinguishable from a list that is
+broken, and the reader has no way to tell which they are looking at.
+
+**Known edge, kept on purpose.** Deduplication keeps the more descriptive of two rows for the
+same title, so *The Late Late Show* survives on Jackson's page: TMDB has him there twice, once
+as *Self* and once as *"An Officer of the Law"*, and the filter only ever sees the surviving
+row. Closing that hole means deleting a credited character to tidy a list, which is precisely
+what the paragraph above refused to do.
+
+---
+
+## 24. A capped section with its own page behind it, not a carousel
+
+**2026-08-10.** Each section shows twelve credits and links to a page holding the whole run —
+`/person/2231-samuel-l-jackson/films`.
+
+**The proposal on the table was a horizontal carousel per section**, the pattern Moviebase,
+IMDb, Rotten Tomatoes and TMDB all use on every screen. Rejected for three reasons, in
+ascending order of weight:
+
+- It is **the component #16 already rejected by name** for the cast block, and for a reason
+  that applies harder here: there is no room for a character under a poster, and *Bryan
+  Cranston as Walter White* is what makes a filmography a filmography rather than a wall.
+- It compresses **#11's tile grid into a single row**. The grid is the layout that flattens
+  structure — which film precedes which, which face recurs — and structure is what this app
+  exists to show.
+- It is the most recognisable **storefront** component there is, and it costs the one sentence
+  the design has earned: *the reference apps are storefronts; this is a reference book.*
+
+**The interaction that was actually wanted — show some, offer the rest — already existed in
+the app** as #16's "and 94 more". This is that pattern with an address.
+
+**Rejected: expanding in place.** Cheaper, no second route, and no empty state to design. A
+real page won because a filmography is a thing people link to, and "Samuel L. Jackson's 190
+films" deserves to have somewhere to point.
+
+**The pages cost nothing extra to serve.** `combined_credits` already rides along on the
+person response (#18), so both of them re-read one cached fetch rather than issuing a request
+of their own.
+
+---
+
+## 25. A rule written wider than it was applied
+
+**2026-08-10.** #21 says *titles never truncate*. That was true of the franchise view, where
+the problem was found, and false everywhere else: the person page still carried `truncate` on
+both the title and the character line, and shipped that way.
+
+**The person page is a worse case than the franchise page that prompted the rule.** A
+franchise run at least numbers its entries, so a clipped title is still locatable. A
+filmography has nothing but the title, and an actor who has been in four films with a shared
+prefix loses the only words that tell them apart.
+
+**Nothing was wrong with the decision. What was wrong is that writing it down felt like
+having fixed it** — and a rule recorded in this file is not a check that runs. The thing that
+would have caught it is the assertion #21 itself describes, `scrollWidth > clientWidth`, run
+somewhere other than the page that prompted it. It now returns **0 across 52 titles and
+character lines** on Jackson's page.
+
+---
+
 ## 14. URLs use the product's vocabulary, not the API's
 
 **2026-08-08.** Routes are `/film/348-alien` and `/series/1437-firefly`.
