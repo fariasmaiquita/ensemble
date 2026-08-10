@@ -106,8 +106,10 @@ export function LibraryControls(props: TitleRef) {
               // Clicking the state you are already in clears it, so there is no separate
               // "remove" affordance to design or explain.
               onClick={() => setStatus(props, active ? null : status)}
-              className={`label flex cursor-pointer items-center gap-2 transition-colors disabled:cursor-default ${
-                active ? "text-accent" : "text-ink-faint hover:text-ink-muted"
+              className={`label flex cursor-pointer items-center gap-2 border-b-2 pb-1 transition-colors disabled:cursor-default ${
+                active
+                  ? "border-ink text-ink"
+                  : "border-transparent text-ink-faint hover:text-ink-muted"
               }`}
             >
               <IconFor size={17} weight={active ? "fill" : "regular"} aria-hidden />
@@ -129,10 +131,10 @@ export function LibraryControls(props: TitleRef) {
               : "Add to favourites"
         }
         onClick={() => toggleFavourite(props)}
-        className={`label flex cursor-pointer items-center gap-2 transition-colors disabled:cursor-default ${
+        className={`label flex cursor-pointer items-center gap-2 border-b-2 pb-1 transition-colors disabled:cursor-default ${
           known && entry?.favourite
-            ? "text-accent"
-            : "text-ink-faint hover:text-ink-muted"
+            ? "border-ink text-ink"
+            : "border-transparent text-ink-faint hover:text-ink-muted"
         }`}
       >
         <Heart

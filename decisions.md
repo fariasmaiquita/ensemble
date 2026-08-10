@@ -755,10 +755,36 @@ to near-black with a fill-weight change is a *quiet* transition, and "did that r
 precisely the symptom of an under-emphatic active state. **The colour argument was reasoning
 about the palette; his was evidence about the interface, and evidence wins.**
 
-**The cost predicted by the original call is real and now visible:** on a cancelled series the
-standing and both active controls are the same rust, so *Cancelled* no longer owns the colour
-on that page. Accepted knowingly. If the palette has to give somewhere, it gives on a warning
-the user has already read rather than on the feedback for the thing they just did.
+**The cost predicted by the original call turned up immediately.** On *Firefly* the standing
+and both active controls were the same rust — three of them in one header — and *Cancelled*
+stopped owning the colour on the page whose whole argument is that it should (#15).
+
+**So the obvious retreat was the spot colour on Favourite only, and it was wrong for a reason
+neither of us saw until all four were rendered side by side.** It fixes the collision by
+putting the three watch-status controls back to plain ink — **which is precisely the treatment
+that had just been reported as too quiet.** It solves the second problem by reinstating the
+first. Rendering the options against real data rather than arguing about them is what made
+that visible, which is the same lesson as #23 and #26: the rule died on contact with the
+thing it described.
+
+**Settled: the active state is a rule under the control, plus the filled icon, in plain ink.
+No spot colour anywhere in the band.**
+
+**The two constraints looked like a tradeoff and were not.** "Loud enough to read as
+confirmation" and "keep the spot colour scarce" only conflict if *louder* has to mean *more
+colour*. It does not — **a shape change is louder than a hue change**, and a rule appearing
+under a word is a shape change. The band now signals three ways at once (fill weight, ink
+weight, and the rule) while spending no colour at all, so *Cancelled* is the only rust left on
+the page.
+
+**It is also more in the direction than either colour option was.** A printed programme marks
+a chosen entry with a rule; it does not have a second ink to spend. And a state no longer
+signalled by colour at all is one fewer thing that depends on colour perception.
+
+**Three positions on one question in a day, each moved by something the previous one could not
+have known** — the palette argument, then a user's reaction to it, then four variants rendered
+together. Worth leaving in full rather than tidied to the answer, because a case study that
+only shows the final position is indistinguishable from one that guessed right.
 
 ---
 
