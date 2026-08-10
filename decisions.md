@@ -1077,3 +1077,252 @@ bug survived forty-one checks and four shows because **every one of those shows 
 seasons from 1** — the examples shared an assumption nobody had written down, so no amount of
 adding cases from the same family could have found it. It surfaced only on the first show
 picked for an unrelated reason: being long enough to stress the list.
+
+---
+
+## 44. The home page shows your data, and refuses the world's
+
+**2026-08-11.** The home page is a library page. Five sections, every one of them computed
+from what you have marked: **continue watching**, **caught up**, **partway through** a
+franchise, **cancelled before you start**, and **the faces recurring across your favourites**.
+
+**Rejected, permanently rather than deferred: trending, popular, top rated, now playing,
+coming soon, box office, certified fresh, staff picks.** These are what every competitor puts
+here and they are genuinely good for a cold start — they need no user, they fill a page
+immediately, and they are one API call and a map.
+
+That is the objection. **A trending row demonstrates nothing except that TMDB has an
+endpoint**, and it makes the home page — the first thing anybody sees — identical to the home
+page of the products #1 declined to compete with. The sections above cannot be built by
+anyone who does not have both halves, which is exactly why they are the ones worth building.
+
+**The rule, stated so it decides the next case as well: a section built from *your* data is
+in; a section built from *the world's* data is out.** The world's data is still everywhere on
+this page — every count, every standing, every franchise — but always as the thing your data
+is measured *against*, never as the subject.
+
+**The cost is real and is paid in the next entry:** the page has nothing to show someone who
+has just arrived.
+
+---
+
+## 45. A first visit gets a contents page, and the offer of a library
+
+**2026-08-11.** With an empty library the page lists its five sections, says in one line what
+each will hold, and offers a button: *fill it with an example library*.
+
+**This was the hardest question in the block, and it is a portfolio problem before it is a
+product one.** A reviewer opens this with an empty `localStorage` and #44 guarantees they see
+nothing. That is the strongest argument for world-data on the home page and it was not waved
+away.
+
+**Rejected: a preview mode** — sections reading from a demo source without touching your
+storage. Safer, and it demonstrates nothing, because **a demonstration that is not the product
+is not evidence about the product.** What makes the example convincing is that you can toggle
+a status on a seeded title and watch the sections rearrange, and that only happens if the seed
+goes through the real store and the real code.
+
+So it writes for real, and safety comes from *when* it is offered rather than from what it
+touches: **only on a library with nothing in it.** Removing it then names the nine titles it
+wrote rather than clearing whatever it finds — verified by adding Alien3 by hand, removing the
+example, and watching Alien3 survive.
+
+**The empty state is a contents page, and that is the part worth keeping either way.** It says
+what the app will do for you and admits it has not met you yet, which is more informative than
+a grid of this week's releases and is honest in a way the grid is not.
+
+**Known and accepted: the example ages.** Severance is seeded with every episode that had
+aired, which is what puts it under *Caught up*; when its next season starts it will move
+itself to *Continue watching*. That is a demo ageing into a different demo rather than into a
+broken one. The alternative — asking TMDB what has aired before seeding — makes the example
+unavailable until a network request returns.
+
+---
+
+## 46. One request for the library, and a second one for the slow part
+
+**2026-08-11.** The browser posts the ids in your library to `/api/digest` and gets back, per
+series, its standing and season census; per film, the franchise it belongs to; and per
+franchise, its parts. Favourite cast lists are a **separate** request to `/api/faces`.
+
+The seam exists because the two halves cannot meet anywhere else: the library is
+`localStorage` (#3) so it exists only in the browser, and TMDB is server-only (#4) so it can
+only be reached from the server. Nothing on this page can be rendered by either side alone.
+
+**Rejected: a `/api/series/[id]` the client fans out over.** Simpler to write, and it turns
+one page load into forty round trips. The server still makes N calls to TMDB either way — the
+saving is that the browser waits once, and that Next's fetch cache means the second person to
+ask about Alien pays nothing.
+
+**Faces is split out deliberately, and it is a design decision rather than a filing one.** It
+is a request per favourite and slower than everything else put together; folded in, the whole
+page would wait for its slowest section. Split, the library sections are on screen while it is
+still arriving — and it gets the designed waiting state #30 promised it when it accepted that
+common actors could never be server-rendered. That promise is now kept in a specific place.
+
+**#38's stated cost turned out not to exist.** It recorded that the home page would need a
+season census and did not have one. It does now, for free: `seasonCensus` and `seriesStanding`
+read the *same* `/tv/{id}` response, and two sections need the standing regardless. The
+deferred problem was a fetch-ordering question, not a data question.
+
+**Failures are named, not dropped.** A title the digest cannot resolve — deleted upstream,
+merged, or a request that failed — is reported and the page says so in words. A section
+rendering fewer rows than your library holds is indistinguishable from a broken one, which is
+the obligation #23, #37 and #43 all landed on separately.
+
+---
+
+## 47. A row records nothing only if the whole library agrees
+
+**2026-08-11.** An entry is dropped when it has no status, no favourite **and no ticked
+episodes**. The third clause is new, and its absence was a bug for the whole of block 6.
+
+The original rule read: *an entry recording neither a status nor a favourite is not a fact
+about the user.* That was true when it was written and **stopped being true the moment episode
+progress arrived**, because progress lives in its own map beside `entries` (#35) and a row
+cannot see it. So a series you had ticked eleven episodes of and never got round to labelling
+was discarded on read — the exact series whose status #38's roll-up exists to derive.
+
+**Worse, and found at the same time: ticking an episode created no entry at all.** The season
+page called into the store with a bare series id, so `progress` gained a key and `entries`
+gained nothing. A series tracked purely by ticking episodes was in nobody's library, could
+never appear on this page, and **exported as a bare id with no title** — which is the one
+thing #32 stores labels to prevent. The season page now passes a `TitleRef` like every other
+writer, so ticking an episode puts the series in your library with its name.
+
+**The pruning moved to `write`, once, instead of living at each of the five call sites that
+can empty a row.** That is where it went wrong: `update` deleted a row the moment its status
+and favourite were gone without knowing about the episodes, and the episode writers did not
+consider entries at all. Whether a row is worth keeping depends on both maps, and `write` is
+the only place holding both at the moment they change.
+
+**No migration and no version bump.** A library written before this reads identically; the
+change is that fewer rows are thrown away, which is not a schema difference.
+
+---
+
+## 48. Two sections, one set, split by whether anything is left
+
+**2026-08-11.** *Continue watching* is series you are in the middle of with at least one aired
+episode unwatched. *Caught up* is the same set with nothing left, still in production.
+
+**The split only exists because of #39.** A series still running is capped at *Watching*
+however much of it you have seen — so without the split, somebody level with six running shows
+opens the app to six rows offering nothing to watch, under a heading telling them to continue.
+Split, the same fact becomes the news: you are up to date, and it is coming back.
+
+**A series that has ended and been fully watched appears in neither**, correctly: there is
+nothing to continue and nothing coming.
+
+**Narrower than the section was scoped as.** It was written down as "still running", which
+would include running series you have never started. Those answer no question a viewer is
+asking — not something to continue, not something to wait for. **Recorded as a deliberate
+narrowing rather than an oversight, and cheap to widen.**
+
+**A series you claimed to have finished is excluded even when the grid disagrees.** On a
+straight-through-numbered show the Finished control cannot fill the grid (#43), so without
+this the page would offer episode one of a series you had just said you completed.
+
+---
+
+## 49. Counted against what exists, and what exists is what has been released
+
+**2026-08-11.** *Partway through* counts films you have marked watched against the **released**
+entries in their franchise. Announced entries are named separately — *"one more announced, not
+yet released"* — and never enter the denominator.
+
+**Rejected: counting every entry TMDB files under the collection.** It is the obvious reading
+of "how many Alien films are there" and it makes a run **permanently unfinishable**: Avatar
+has two sequels dated 2029 and 2031, so someone who has seen all three that exist would sit at
+*3 of 5* for five years. Rendering an announcement as though it were a film is the same false
+statement #17 refuses on a person's page.
+
+**The ordering is fewest-remaining first**, not most-recently-touched like every other section
+here. A franchise is not something you touched at a moment, it is a run with an end, and the
+one you are two films from finishing is more useful to be shown than the one you are seven
+from.
+
+**The row names the next film rather than the franchise's poster**, because the actionable
+thing is *which one you have not seen* — the same reasoning that made a person page's preview
+best-known rather than chronological (#24) once real data was in front of it.
+
+---
+
+## 50. A warning section should not be offering to start the thing
+
+**2026-08-11.** Rows under *Cancelled before you start* say how much of the series exists —
+*"Cut off after 2 seasons, 19 episodes"* — rather than reusing the progress line every other
+series row carries.
+
+It shipped with the shared line and was caught by looking at the page: under a heading that
+means *do not begin this lightly*, every row read **"0 of 19 episodes, next up S1 E1"**. That
+is useless — you have watched none of it by definition, which is what put it here — and it
+contradicts the heading directly.
+
+**What somebody weighs before starting a cancelled series is how much there is**, so that is
+what the row says. The section also expires: once you have started, the warning is a reproach
+rather than information, and the row disappears.
+
+**The general form, since this is the second time it has come up:** a component reused across
+sections quietly assumes every section is asking the same question. *Cancelled before you
+start* and *Continue watching* are asking opposite ones.
+
+---
+
+## 51. Nothing is truncated on the way into the count
+
+**2026-08-11.** *Faces you keep watching* counts every credited cast member of every
+favourite, not the top-billed dozen.
+
+**Rejected: capping each cast list.** It is the obvious economy — a film carries around a
+hundred credits and most are one-scene parts — and it is wrong in the specific way that would
+empty the section of its best results. **A recurring character actor is exactly who sits below
+the fold, and is exactly who this feature exists to surface.**
+
+Measured rather than argued: on a favourites set of Alien, Aliens, The Terminator, Titanic and
+Whiplash, the connections found were Bill Paxton in three, then Sigourney Weaver, Michael
+Biehn, Lance Henriksen, Paul Reiser — and **Jenette Goldstein**, Private Vasquez in *Aliens*
+and *"Irish Mommy"* in *Titanic*, where she is **29th of 117 credits**. A cap anywhere under
+thirty deletes the single most surprising row on the page.
+
+Ties break on billing, so at equal counts a lead outranks a one-scene player. A dual role
+counts once. The appearances are ordered oldest-first against the library's own years, because
+three films someone was in read as a career in order and as a set otherwise.
+
+---
+
+## 52. Image URLs are not a secret, so they moved
+
+**2026-08-11.** `posterUrl` and `profileUrl` moved out of `tmdb.ts` into `images.ts`, which
+`tmdb.ts` re-exports so nothing that imported them changed.
+
+`tmdb.ts` opens with `import "server-only"` and that is load-bearing (#4): a client component
+importing it fails the build rather than shipping the access token. The home page is a client
+component that needs poster URLs, so the guard fired exactly as designed.
+
+**Rejected: loosening the guard.** Building a CDN URL needs no token, no network and no
+secret — it is string concatenation that happened to be filed next to something dangerous. The
+code moved; the guard did not.
+
+---
+
+## 53. The checks were tested before the code was trusted
+
+**2026-08-11.** The pure logic of this block has 39 checks, and **each one was verified to be
+capable of failing** by breaking the rule it covers and confirming the suite went red.
+
+This is #40 and #43's lesson turned into a procedure. Both of last block's bugs survived every
+check that existed, because the checks were written from the same examples as the rules. A
+suite that passes on its first run has demonstrated nothing about the code — only that it
+agrees with whatever the author already believed.
+
+**Sixteen deliberate breaks were introduced. Six survived**, meaning six checks were passing
+for a reason other than the one intended. The plainest: *"an ended series fully watched is not
+'caught up'"* passed whether or not the guard it was written for existed, because the status
+test excluded it first. Each survivor was answered with a case that could only be explained by
+the guard under test, and the second pass caught all sixteen.
+
+**The parser bug in #47 was not found by any of this.** It was found by looking at the rendered
+page and noticing a section that should have had a row in it and did not. **Checks confirm the
+rules you thought to write; only running the thing finds the rule you never wrote down.** Both
+were necessary and neither would have done alone.

@@ -135,8 +135,23 @@ export default async function SeasonPage({
             .join(" · ")}
         </p>
 
+        {/*
+          The series is passed as a `TitleRef`, not as a bare id.
+
+          Ticking an episode puts the series in your library, and a library row needs a label
+          — this page is holding TMDB's current one, exactly as the detail page is when it
+          refreshes a stored title. Without it, marking episodes wrote progress under an id
+          with no name anywhere, which is unreadable in an export and invisible on the home
+          page.
+        */}
         <EpisodeList
-          seriesId={series.id}
+          series={{
+            kind: "series",
+            id: series.id,
+            title: series.name,
+            year: year(series.first_air_date),
+            posterPath: series.poster_path,
+          }}
           season={detail.season_number}
           episodes={detail.episodes}
           census={census}
