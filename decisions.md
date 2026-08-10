@@ -1038,3 +1038,42 @@ and it is the one an export would carry into a file nobody can interrogate.
 **Specials are excluded throughout** — from the fill, from "everything before", and from the
 roll-up's denominator. Breaking Bad has nine of them; counting them would mean nobody ever
 finishes it. TMDB agrees, and its own `number_of_episodes` excludes season 0.
+
+---
+
+## 43. Not every series numbers its episodes from 1, and guessing writes fiction
+
+**2026-08-10.** Anything that generates episode numbers — the Finished fill, "everything
+before" — reads them from the census, and the census **omits them rather than assuming them**
+on a series that numbers straight through.
+
+**One Piece's twenty-first season holds 197 episodes numbered 892 to 1088.** The first
+implementation generated `1..197` for it. That is 197 episode numbers the season does not
+contain, written into the user's own export, and rendered as ticks against episodes nobody
+watched.
+
+**The detector is one comparison against data already on the response:** if the most recent
+episode's number fits inside its own season's count, seasons restart at 1. Verified against
+One Piece (S23E1173 in a 26-episode season → straight through), Breaking Bad (S5E16 of 16),
+Lioness (S3E2 of 8) and The Simpsons (S37E15 of 15, after thirty-seven seasons).
+
+**Where the numbers are unknown, the bulk shortcuts are skipped rather than approximated.**
+On One Piece, marking the series Finished stores the status and fills nothing. **That
+reintroduces exactly the band-versus-grid disagreement #42 exists to prevent** — and it is
+still the right trade, because the alternative is not agreement, it is agreement about
+something false. The season page is unaffected: it holds the real numbers for the season it
+is showing, so ticking, "mark season watched" and "everything before" all work there.
+
+**Completion is now counted rather than range-checked, and that is a deliberate weakening.**
+The old test asked how many ticks fell between 1 and the season's length, which is the same
+buried assumption in a second place — a viewer who had watched all 197 One Piece episodes
+would have scored zero against it and never finished the series. Counting can be satisfied by
+a hand-edited file holding 197 arbitrary numbers. **Being lenient about a forged file is a
+smaller cost than being wrong about a real show.**
+
+**The lesson is the same one #40 recorded, arriving a second time in one block.** That entry
+says a check written from the same examples as the rule tests the examples, not the rule. This
+bug survived forty-one checks and four shows because **every one of those shows numbers its
+seasons from 1** — the examples shared an assumption nobody had written down, so no amount of
+adding cases from the same family could have found it. It surfaced only on the first show
+picked for an unrelated reason: being long enough to stress the list.
