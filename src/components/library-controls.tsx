@@ -102,6 +102,25 @@ export function LibraryControls(props: LibraryControlsProps) {
    */
   const heldByEpisodes = known && derived !== null && entry?.status == null;
 
+  /*
+   * The one case where marking a series finished cannot fill its episodes.
+   *
+   * A handful of series — long-running anime mostly — number their episodes straight
+   * through instead of restarting each season, and the series response carries counts but
+   * never numbers. Rather than write 197 identifiers that a season does not contain, the
+   * census omits them and the fill skips those seasons (decisions.md #43).
+   *
+   * That silently leaves the band saying Finished above a season list reading zero, which is
+   * exactly the disagreement #42 exists to prevent. It cannot be prevented here, so it is
+   * disclosed here instead — the same obligation as #37 and #23. Saying nothing would leave
+   * the reader to conclude the app had simply failed to save.
+   */
+  const unfillable =
+    known &&
+    kind === "series" &&
+    entry?.status === "watched" &&
+    (census?.some((entry) => !entry.numbers) ?? false);
+
   function onStatusClick(next: WatchStatus) {
     const claimed = entry?.status;
 
@@ -226,6 +245,14 @@ export function LibraryControls(props: LibraryControlsProps) {
             Clear episodes
           </button>
           .
+        </p>
+      ) : null}
+
+      {unfillable ? (
+        <p className="text-meta text-ink-muted basis-full">
+          Marked finished, but the episodes are not ticked — this series numbers its episodes
+          straight through rather than restarting each season, and the app will not guess
+          which ones those are. Open a season to mark them there.
         </p>
       ) : null}
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { profileUrl } from "@/lib/tmdb";
 import { getPerson } from "@/lib/person";
 import { type CreditGroup, bestKnown, filmography, lifespan, personHref } from "@/lib/types";
@@ -171,8 +172,12 @@ function PreviewSection({
 
       <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         {capped ? (
-          <Link href={seeAllHref} className="label text-accent hover:underline">
-            See all {total} {noun} →
+          <Link
+            href={seeAllHref}
+            className="label text-accent inline-flex items-center gap-1.5 hover:underline"
+          >
+            See all {total} {noun}
+            <ArrowRight size={13} aria-hidden />
           </Link>
         ) : (
           <span />

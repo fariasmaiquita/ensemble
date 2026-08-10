@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+// The SSR build, not the CSR one used in the interactive components: these are server
+// components, so the icon renders as plain markup rather than shipping a script for an arrow.
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr/ArrowLeft";
+import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { tmdb, TmdbError } from "@/lib/tmdb";
 import {
   type SeasonDetail,
@@ -111,9 +115,10 @@ export default async function SeasonPage({
         */}
         <Link
           href={seriesHref(series.id, series.name)}
-          className="label text-ink-faint hover:text-ink inline-block transition-colors"
+          className="label text-ink-faint hover:text-ink inline-flex items-center gap-1.5 transition-colors"
         >
-          ← {series.name}
+          <ArrowLeft size={13} aria-hidden />
+          {series.name}
           {year(series.first_air_date) ? ` (${year(series.first_air_date)})` : ""}
         </Link>
 
@@ -146,9 +151,10 @@ export default async function SeasonPage({
           {previous ? (
             <Link
               href={seasonHref(series.id, series.name, previous.season_number)}
-              className="label text-ink-faint hover:text-ink flex-1 transition-colors"
+              className="label text-ink-faint hover:text-ink inline-flex flex-1 items-center gap-1.5 transition-colors"
             >
-              ← {previous.name}
+              <ArrowLeft size={13} aria-hidden />
+              {previous.name}
             </Link>
           ) : (
             <span className="flex-1" />
@@ -164,9 +170,10 @@ export default async function SeasonPage({
           {next ? (
             <Link
               href={seasonHref(series.id, series.name, next.season_number)}
-              className="label text-ink-faint hover:text-ink flex-1 text-right transition-colors"
+              className="label text-ink-faint hover:text-ink inline-flex flex-1 items-center justify-end gap-1.5 transition-colors"
             >
-              {next.name} →
+              {next.name}
+              <ArrowRight size={13} aria-hidden />
             </Link>
           ) : (
             <span className="flex-1" />
