@@ -391,6 +391,30 @@ function isSelfAppearance(credit: CreditItem): boolean {
   return /^self\b/.test(character) || /^(him|her|them)self\b/.test(character);
 }
 
+/**
+ * The best-known work in a group, for the preview a section shows before handing off to its
+ * full page.
+ *
+ * **The full list stays chronological; only the preview is ordered this way**, and each is
+ * labelled where it appears. Ordering the whole filmography by popularity is what #17
+ * rejected — it turns a career into a greatest-hits list with no shape. But a *chronological*
+ * preview has a failure of its own that only showed up once real data was in front of it:
+ * the newest twelve of Samuel L. Jackson's 190 films are recent contract work and a Super
+ * Bowl halftime show, and Pulp Fiction is not among them.
+ *
+ * Rating volume rather than rating average, deliberately: this is a question about how
+ * widely seen something is, not how good it is, and the app takes no position on the second.
+ */
+export function bestKnown(credits: CreditItem[], count: number): CreditItem[] {
+  return [...credits]
+    .sort(
+      (a, b) =>
+        b.vote_count - a.vote_count ||
+        (creditDate(b) ?? "").localeCompare(creditDate(a) ?? ""),
+    )
+    .slice(0, count);
+}
+
 /** Newest first, with undated work last — unknown is not the same as forthcoming. */
 function byRecency(credits: CreditItem[]): CreditItem[] {
   const dated = credits.filter((c) => creditDate(c));
