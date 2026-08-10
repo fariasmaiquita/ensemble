@@ -27,11 +27,32 @@ export function CastList({ cast, limit = 12 }: { cast: CastMember[]; limit?: num
               href={personHref(member.id, member.name)}
               className="hover:bg-paper-sunk/60 -mx-2 flex items-center gap-3 px-2 py-2.5 transition-colors"
             >
-              <Plate src={profileUrl(member.profile_path)} size="mini" alt="" />
+              <Plate
+                src={profileUrl(member.profile_path)}
+                size="mini"
+                align="center"
+                alt=""
+              />
+              {/*
+                Nothing here truncates — as a guard, not as a bug fix, and the distinction is
+                worth recording because the bug it was meant to fix did not exist.
+
+                Measured at real viewport widths, no cast cell clips: 0 of 216 across nine
+                films at 640px, the tightest point where the two-column grid applies, and 0 at
+                375px where the grid collapses to one column. The `truncate` this replaces was
+                never firing.
+
+                It comes out anyway because the alternative is a component that is correct by
+                luck. #16 says the character name is why this is a table rather than a
+                carousel, and leaving in a rule that deletes character names — dormant only
+                because today's names happen to be short enough — makes the whole argument
+                contingent on the data. Uneven row heights are the cost; on a ruled list they
+                read as typesetting.
+              */}
               <span className="min-w-0">
-                <span className="text-meta text-ink block truncate">{member.name}</span>
+                <span className="text-meta text-ink block">{member.name}</span>
                 {member.character ? (
-                  <span className="text-meta text-ink-faint block truncate italic">
+                  <span className="text-meta text-ink-faint block italic">
                     {member.character}
                   </span>
                 ) : null}

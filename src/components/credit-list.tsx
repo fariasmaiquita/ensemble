@@ -29,7 +29,7 @@ export function CreditList({
             href={creditHref(credit)}
             className="hover:bg-paper-sunk/60 -mx-3 flex items-center gap-4 px-3 py-3 transition-colors"
           >
-            <Plate src={posterUrl(credit.poster_path)} size="mini" alt="" />
+            <Plate src={posterUrl(credit.poster_path)} size="mini" align="center" alt="" />
 
             <div className="min-w-0 flex-1">
               <p className="text-body text-ink">{creditTitle(credit)}</p>

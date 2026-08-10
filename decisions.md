@@ -387,6 +387,120 @@ character lines** on Jackson's page.
 
 ---
 
+## 26. A truncated list and a complete one answer different questions
+
+**2026-08-10.** The twelve-credit preview on a person page is ordered by **rating volume** and
+labelled *Best known*. The full page behind it stays **chronological** and is labelled
+*newest first*.
+
+**The chronological preview was defensible until it met real data.** The newest twelve of
+Samuel L. Jackson's 190 films are recent contract work, a *Garfield* sequel and a Super Bowl
+halftime show. *Pulp Fiction* is not among them; neither is *Jackie Brown*, *Die Hard*,
+*Jurassic Park* or *The Avengers*. That was the first thing anyone saw on his page.
+
+**This does not reopen #17.** Ordering a *whole* filmography by popularity turns a career into
+a greatest-hits list with no shape, and that is still refused — the full pages are still
+chronological. What changed is noticing that the two lists are answering different questions:
+a complete list is a record, and a truncated one is a summary, and a summary ordered by
+recency is just an arbitrary twelve.
+
+**Rejected: a separate "Best known" strip above the chronological list**, which was the
+preferred option going in. Farias killed it on the point that it either repeats rows from the
+list below — making the page say the same thing twice — or excludes them, which makes the
+chronology below it lie by omission.
+
+**Rating volume, not rating average, deliberately.** The question a preview answers is how
+widely seen something is, not how good it is, and the app takes no position on the second.
+
+**The reordering is tied to the cap rather than applied unconditionally.** A section that fits
+on the page hides nothing, so there is no obscure work for the sort to protect and no reason
+to depart from chronology — Johansson's nine series stay newest-first, unlabelled. An
+unlabelled twelve-row list in popularity order would have been the worst of both.
+
+---
+
+## 27. TMDB's classification is the classification
+
+**2026-08-10.** A Super Bowl halftime show sits in Jackson's films list, because TMDB says it
+is a movie. No rule reclassifies or hides it.
+
+The question was raised because a 44-minute halftime show reads oddly beside feature films.
+**It turned out to be a sorting complaint wearing a classification costume** — the show was
+only visible because it was in the newest twelve, and #26 dropped it to somewhere around
+#150 without any rule at all.
+
+**Rejected: filtering by genre.** Documentary is 21 of Jackson's 190 films and **36 of Morgan
+Freeman's 155**. The ones that survive the self filter are *I Am Not Your Negro*, *March of
+the Penguins*, *African Cats*, *Born to Be Wild*. **Narration is Freeman's second career**, and
+a documentary filter deletes it.
+
+**Rejected: using TMDB's `type: "Talk Show"` field.** It is real and it is exactly the right
+signal, but it exists only on the series *detail* endpoint, not on `combined_credits` — so
+using it costs one request per series, forty for Jackson. That is the N-requests problem from
+#6 spent on hiding rows rather than on the feature the app is actually for.
+
+**And the halftime show credits Jackson as "Uncle Sam"**, which is why it survived the self
+filter in the first place. Cutting it means ruling that a credited character is not a real
+one, which is what #23 refused to do.
+
+**What is actually missing is context, not a filter** — nothing on the row says a 44-minute
+programme is a different kind of object from a feature. Runtime or genre on the row would fix
+that by showing more rather than less. Deferred to the design pass.
+
+---
+
+## 28. A guard against a bug that did not exist
+
+**2026-08-10.** The cast grid stopped truncating names and characters. **The measurement that
+justified it was wrong, and the change was kept anyway** — both halves are the decision.
+
+The claim was that 37 of 168 cast cells clipped at 375px, worst case *"Natasha Romanoff /
+Black Widow"* losing 79px. **It was an artifact.** The check set a *container* to 375px while
+the real viewport stayed at 888px, and Tailwind's breakpoints key off the viewport — so it
+measured a two-column grid crushed into 375px, a layout that never occurs, since at a real
+375px the grid is a single 327px column. Re-measured at real widths: **0 of 216 cells across
+nine films at 640px** (the tightest point where two columns apply) and 0 at 375px. The
+`truncate` was never firing.
+
+**Kept regardless, for a different reason than the one it was approved on.** #16 says the
+character name is the reason this is a table and not a carousel. Leaving in a rule whose
+entire job is to delete character names — dormant only because today's names happen to be
+short — makes that argument contingent on the data rather than on the design.
+
+**The transferable lesson is about the instrument, not the grid.** A container width is not a
+viewport width, and any check on responsive behaviour that does not set the viewport and read
+`innerWidth` back is measuring a layout that will never ship. This is the second measurement
+error in one session; the first was a person id recalled from memory rather than looked up.
+**Both were caught by re-checking, neither by care.**
+
+---
+
+## 29. A design token that layout was silently overriding
+
+**2026-08-10.** `Plate` now sets its own `align-self`, so it can never be stretched by the
+row it is dropped into.
+
+**`aspect-[2/3]` is not self-enforcing inside flex.** Flex items stretch to their row's
+height by default, and a stretched height is a *definite* height — which makes the browser
+discard `aspect-ratio` entirely. On a person page that meant **the poster's height was set by
+the length of the biography**: Jackson's rendered 208×679, a ratio of 0.307 against the 0.667
+it declares, with `object-cover` slicing the sides off to fill it. Farias spotted it by eye
+and diagnosed the cause correctly before it was measured.
+
+**Every detail page had it. Only the person pages showed it**, because film and series posters
+happened to be taller than their text — proved rather than assumed by injecting a long synopsis
+into the *Alien* page, which stretched its plate from 312px to 637px.
+
+**So the guard lives on the component, not on the parents.** Fixing the three pages that show
+it today leaves the defect live for the fourth that gets written next week — which is exactly
+#25, one session later. `align` takes `start` or `center` and both values prevent stretching;
+the choice between them is only about how a small plate sits beside short text.
+
+**Verified as an invariant, not an instance:** 264 plates across seven page types at 375, 768
+and 1280px, none deviating from 2:3.
+
+---
+
 ## 14. URLs use the product's vocabulary, not the API's
 
 **2026-08-08.** Routes are `/film/348-alien` and `/series/1437-firefly`.
