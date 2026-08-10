@@ -5,6 +5,8 @@ import {
   type Credits,
   type SeriesStanding,
   type TvDetail,
+  airedSeasons,
+  isOpenEnded,
   parseId,
   seriesStanding,
   standingLabel,
@@ -14,6 +16,7 @@ import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
 import { CastList } from "@/components/cast-list";
 import { LibraryControls } from "@/components/library-controls";
+import { SeasonIndex } from "@/components/season-index";
 
 interface SeriesWithCredits extends TvDetail {
   credits: Credits;
@@ -85,6 +88,15 @@ export default async function SeriesPage({ params }: PageProps<"/series/[id]">) 
         ? `${first}–${last}`
         : first;
 
+  // The seasons whose episode counts are fact rather than announcement. Both the roll-up
+  // and the Finished control work from this, so neither can claim an episode that has not
+  // gone out yet.
+  const vouched = airedSeasons(series);
+  const census = vouched.map((s) => ({
+    season: s.season_number,
+    episodes: s.episode_count,
+  }));
+
   const seasons = `${series.number_of_seasons} ${
     series.number_of_seasons === 1 ? "season" : "seasons"
   }`;
@@ -116,6 +128,8 @@ export default async function SeriesPage({ params }: PageProps<"/series/[id]">) 
           title={series.name}
           year={first}
           posterPath={series.poster_path}
+          census={census}
+          openEnded={isOpenEnded(standing)}
         />
 
         <div className="border-rule mt-8 flex gap-6 border-t pt-8 sm:gap-8">
@@ -156,6 +170,13 @@ export default async function SeriesPage({ params }: PageProps<"/series/[id]">) 
             ) : null}
           </div>
         </div>
+
+        <SeasonIndex
+          seriesId={series.id}
+          seriesName={series.name}
+          seasons={series.seasons}
+          confirmable={vouched.map((s) => s.season_number)}
+        />
 
         <CastList cast={series.credits?.cast ?? []} />
       </article>

@@ -275,6 +275,36 @@ export function year(date: string | null | undefined): string | null {
   return date ? date.slice(0, 4) : null;
 }
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/**
+ * `2008-01-20` as `20 Jan 2008`.
+ *
+ * Split rather than passed to `Date`, deliberately: `new Date("2008-01-20")` is parsed as
+ * UTC midnight and then rendered in the reader's zone, so anyone west of Greenwich sees an
+ * air date one day early. The string TMDB sends is already the date in words.
+ */
+export function formatDate(date: string | null | undefined): string | null {
+  if (!date) return null;
+  const [y, m, d] = date.split("-");
+  const month = MONTHS[Number(m) - 1];
+  if (!y || !month || !d) return date;
+  return `${Number(d)} ${month} ${y}`;
+}
+
 /**
  * URLs carry a readable slug after the id — `/film/348-alien` rather than `/film/348` —
  * so a pasted link says what it points at. The id is parsed off the front, so the slug is
@@ -304,6 +334,21 @@ export function mediaHref(r: MultiSearchResult): string {
 
 export function personHref(id: number, name: string): string {
   return `/person/${id}-${slugify(name)}`;
+}
+
+export function seriesHref(id: number, name: string): string {
+  return `/series/${id}-${slugify(name)}`;
+}
+
+/**
+ * `/series/1396-breaking-bad/season/2`.
+ *
+ * The season keeps its bare number rather than taking a slug of its own: TMDB names most
+ * seasons "Season 2", so a slug would read `/season/2-season-2`. Specials are season 0 and
+ * survive that numbering unchanged.
+ */
+export function seasonHref(id: number, name: string, season: number): string {
+  return `${seriesHref(id, name)}/season/${season}`;
 }
 
 /* -------------------------------------------------------------------------- */
