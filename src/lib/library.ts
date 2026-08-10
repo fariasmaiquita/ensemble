@@ -71,6 +71,8 @@ export interface LibraryEntry extends TitleRef {
  */
 export type SeriesProgress = Record<string, number[]>;
 
+import type { SeasonCensus } from "./types";
+
 export interface Library {
   version: 1;
   entries: Record<string, LibraryEntry>;
@@ -406,20 +408,16 @@ export function favourites(library: Library): LibraryEntry[] {
 export const SPECIALS_SEASON = 0;
 
 /**
- * How many episodes each season has, as counted by whichever page is doing the asking.
- *
- * **This is the world's data and it is passed in, never stored** — the same boundary #32
+ * The census is **the world's data, passed in and never stored** — the same boundary #32
  * draws around the display snapshot, held from the other side. The library knows which
  * episodes you ticked; it has no idea how many exist, and storing that would put a number
- * TMDB owns into your export where it could quietly go stale and change what "finished"
- * means without anything having happened.
+ * TMDB owns into your export, where it could go stale and change what "finished" means
+ * without anything having happened.
  *
- * Seasons are listed only when their episode count is *confirmable* — see `censusFrom`.
+ * Defined in `types.ts` beside the response shapes it is built from; re-exported here
+ * because everything that consumes it consumes it through this module.
  */
-export interface SeasonCensus {
-  season: number;
-  episodes: number;
-}
+export type { SeasonCensus } from "./types";
 
 export function seriesProgress(library: Library, seriesId: number): SeriesProgress {
   return library.progress[String(seriesId)] ?? {};
@@ -511,11 +509,13 @@ export function markThrough(
 
   for (const entry of census) {
     if (entry.season === SPECIALS_SEASON || entry.season > season) continue;
+    // No numbers means the app is not willing to guess them — see `seasonCensus`. Skipping
+    // costs a season's worth of ticks; guessing would write episodes that do not exist.
+    if (!entry.numbers) continue;
 
-    const upTo = entry.season === season ? episode : entry.episodes;
-    const existing = seasons[String(entry.season)] ?? [];
-    const filled = new Set(existing);
-    for (let e = 1; e <= upTo; e++) filled.add(e);
+    const upTo = entry.season === season ? episode : Infinity;
+    const filled = new Set(seasons[String(entry.season)] ?? []);
+    for (const number of entry.numbers) if (number <= upTo) filled.add(number);
 
     if (filled.size > 0) seasons[String(entry.season)] = [...filled].sort((a, b) => a - b);
   }
@@ -531,9 +531,9 @@ export function fillSeries(seriesId: number, census: SeasonCensus[]) {
   const seasons = { ...(progress[key] ?? {}) };
 
   for (const entry of census) {
-    if (entry.season === SPECIALS_SEASON || entry.episodes === 0) continue;
+    if (entry.season === SPECIALS_SEASON || !entry.numbers?.length) continue;
     const filled = new Set(seasons[String(entry.season)] ?? []);
-    for (let e = 1; e <= entry.episodes; e++) filled.add(e);
+    for (const number of entry.numbers) filled.add(number);
     seasons[String(entry.season)] = [...filled].sort((a, b) => a - b);
   }
 
@@ -589,10 +589,20 @@ export function derivedStatus(
   if (running) return "watching";
   if (countable.length === 0) return "watching";
 
-  const complete = countable.every((entry) => {
-    const ticked = progress[String(entry.season)] ?? [];
-    return ticked.filter((e) => e >= 1 && e <= entry.episodes).length >= entry.episodes;
-  });
+  /*
+   * Counted, not range-checked.
+   *
+   * The first version asked how many ticks fell between 1 and the season's length, which
+   * quietly assumed every season starts at episode 1. One Piece's twenty-first season runs
+   * 892 to 1088, so a viewer who had watched all 197 would have scored zero against that
+   * test and never finished the series. Counting is weaker against a hand-edited file — 197
+   * invented numbers would satisfy it — and that is the right trade: ticks only ever come
+   * from a real episode list, and being wrong about a real show is worse than being lenient
+   * about a forged one.
+   */
+  const complete = countable.every(
+    (entry) => (progress[String(entry.season)] ?? []).length >= entry.episodes,
+  );
 
   return complete ? "watched" : "watching";
 }

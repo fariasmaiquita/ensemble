@@ -6,6 +6,7 @@ import {
   type SeasonDetail,
   type TvDetail,
   formatDate,
+  hasAired,
   parseId,
   seasonCensus,
   seriesHref,
@@ -72,7 +73,21 @@ export default async function SeasonPage({
   const { id, season } = await params;
   const { series, detail } = await getSeason(id, season);
 
-  const census = seasonCensus(series);
+  /*
+   * The census, with this season's entry replaced by the episode numbers actually on the
+   * page rather than the ones `seasonCensus` is willing to assume.
+   *
+   * This is the only season whose numbering the app is holding rather than inferring, so it
+   * is the only one that stays correct on a series numbered straight through — One Piece's
+   * twenty-first season runs 892 to 1088, and "everything before episode 950" has to mean
+   * those numbers and not `1..59`.
+   */
+  const airedHere = detail.episodes.filter((e) => hasAired(e)).map((e) => e.episode_number);
+  const census = seasonCensus(series).map((entry) =>
+    entry.season === detail.season_number
+      ? { ...entry, episodes: airedHere.length, numbers: airedHere }
+      : entry,
+  );
 
   // Ordered rather than trusted: TMDB lists seasons in order today, and neighbouring pages
   // would silently swap if it ever stopped.

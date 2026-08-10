@@ -268,20 +268,60 @@ export function airedInSeason(season: Season, last: EpisodeMarker | null): numbe
 }
 
 /**
+ * Whether each season numbers its episodes from 1, or the series numbers straight through.
+ *
+ * **Most shows restart; some do not, and assuming it is a bug.** One Piece's twenty-first
+ * season holds 197 episodes numbered **892 to 1088**, so anything that generates `1..197`
+ * for it writes 197 episode numbers that season does not contain.
+ *
+ * The test costs one comparison against data already on the response: if the most recent
+ * episode's number fits inside its own season's count, seasons restart. Checked against One
+ * Piece (S23E1173 in a 26-episode season → straight through), Breaking Bad (S5E16 of 16),
+ * Lioness (S3E2 of 8) and The Simpsons (S37E15 of 15).
+ */
+export function seasonsRestartNumbering(series: TvDetail): boolean {
+  const last = series.last_episode_to_air;
+  if (!last) return true;
+  const own = series.seasons.find((s) => s.season_number === last.season_number);
+  return !own || last.episode_number <= own.episode_count;
+}
+
+/**
  * Every season with something to tick, counted by what exists rather than what is announced.
  *
  * This is what the roll-up, the Finished control and "everything before" all work from, so
  * none of them can reach an episode that has not been broadcast. A series still in
  * production is additionally capped at "watching" by `derivedStatus` — the census says what
  * exists, and the cap says that having seen all of it is still not finishing it.
+ *
+ * `numbers` is the aired episode numbers where the app actually knows them, and is **absent
+ * rather than guessed** on a series that numbers straight through. Anything that writes
+ * episodes reads `numbers` and skips a season that has none, so a show like One Piece loses
+ * the bulk shortcuts rather than gaining 197 fabricated ticks.
  */
-export function seasonCensus(series: TvDetail): { season: number; episodes: number }[] {
+export function seasonCensus(series: TvDetail): SeasonCensus[] {
+  const restarts = seasonsRestartNumbering(series);
+
   return series.seasons
-    .map((season) => ({
-      season: season.season_number,
-      episodes: airedInSeason(season, series.last_episode_to_air),
-    }))
+    .map((season) => {
+      const episodes = airedInSeason(season, series.last_episode_to_air);
+      return {
+        season: season.season_number,
+        episodes,
+        numbers: restarts
+          ? Array.from({ length: episodes }, (_, i) => i + 1)
+          : undefined,
+      };
+    })
     .filter((entry) => entry.episodes > 0);
+}
+
+export interface SeasonCensus {
+  season: number;
+  /** How many episodes have aired. */
+  episodes: number;
+  /** The aired episode numbers, when the app holds them rather than assuming them. */
+  numbers?: number[];
 }
 
 /* -------------------------------------------------------------------------- */
