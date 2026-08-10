@@ -1,39 +1,17 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { tmdb, posterUrl, profileUrl, TmdbError } from "@/lib/tmdb";
-import {
-  type CombinedCredits,
-  type CreditItem,
-  type PersonDetail,
-  creditHref,
-  creditTitle,
-  creditYear,
-  lifespan,
-  parseId,
-  tidyFilmography,
-} from "@/lib/types";
+import { profileUrl } from "@/lib/tmdb";
+import { getPerson } from "@/lib/person";
+import { type CreditGroup, filmography, lifespan, personHref } from "@/lib/types";
 import { Masthead, SearchField } from "@/components/masthead";
 import { Plate } from "@/components/plate";
+import { CreditList } from "@/components/credit-list";
 
-interface PersonWithCredits extends PersonDetail {
-  combined_credits: CombinedCredits;
-}
-
-async function getPerson(param: string): Promise<PersonWithCredits> {
-  const id = parseId(param);
-  if (id === null) notFound();
-
-  try {
-    // One request rather than two: TMDB will inline a sub-resource on the detail response.
-    return await tmdb<PersonWithCredits>(`/person/${id}`, {
-      append_to_response: "combined_credits",
-    });
-  } catch (error) {
-    if (error instanceof TmdbError && error.status === 404) notFound();
-    throw error;
-  }
-}
+/**
+ * How many credits a section shows before it hands off to its own page. Matched to the cast
+ * block, so the two lists on a film page and a person page cut off at the same depth.
+ */
+const PREVIEW_LENGTH = 12;
 
 export async function generateMetadata({
   params,
@@ -54,8 +32,9 @@ export default async function PersonPage({ params }: PageProps<"/person/[id]">) 
   const { id } = await params;
   const person = await getPerson(id);
 
-  const filmography = tidyFilmography(person.combined_credits?.cast ?? []);
+  const work = filmography(person.combined_credits?.cast ?? []);
   const years = lifespan(person);
+  const base = personHref(person.id, person.name);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 pb-24 sm:px-8">
@@ -90,13 +69,28 @@ export default async function PersonPage({ params }: PageProps<"/person/[id]">) 
           </div>
         </div>
 
-        <CreditSection
-          heading={`Appears in — ${filmography.released.length} ${
-            filmography.released.length === 1 ? "title" : "titles"
-          }`}
-          credits={filmography.released}
+        <PreviewSection
+          heading="Films"
+          group={work.films}
+          seeAllHref={`${base}/films`}
+          noun="films"
         />
-        <CreditSection heading="Announced" credits={filmography.upcoming} quiet />
+
+        <PreviewSection
+          heading="Series"
+          group={work.series}
+          seeAllHref={`${base}/series`}
+          noun="series"
+        />
+
+        {work.announced.length > 0 ? (
+          <section className="border-rule mt-10 border-t pt-8">
+            <h2 className="label text-ink-faint">Announced</h2>
+            <div className="mt-4 opacity-70">
+              <CreditList credits={work.announced} showCategory />
+            </div>
+          </section>
+        ) : null}
       </article>
     </div>
   );
@@ -125,46 +119,57 @@ function Biography({ text }: { text: string }) {
   );
 }
 
-function CreditSection({
+/**
+ * A section that shows the head of a list and says plainly how much it is not showing.
+ *
+ * Both figures in the footer exist to keep the page from lying by omission: the count says
+ * how deep the list really goes, and the self-appearance count says that credits were
+ * filtered rather than absent.
+ */
+function PreviewSection({
   heading,
-  credits,
-  quiet = false,
+  group,
+  seeAllHref,
+  noun,
 }: {
   heading: string;
-  credits: CreditItem[];
-  quiet?: boolean;
+  group: CreditGroup;
+  seeAllHref: string;
+  noun: string;
 }) {
-  if (credits.length === 0) return null;
+  const total = group.released.length;
+  if (total === 0 && group.asSelf === 0) return null;
 
   return (
     <section className="border-rule mt-10 border-t pt-8">
-      <h2 className="label text-ink-faint">{heading}</h2>
+      <h2 className="label text-ink-faint">
+        {heading}
+        {total > 0 ? ` — ${total}` : ""}
+      </h2>
 
-      <ul className={`divide-rule mt-4 divide-y ${quiet ? "opacity-70" : ""}`}>
-        {credits.map((credit) => (
-          <li key={`${credit.media_type}-${credit.id}`}>
-            <Link
-              href={creditHref(credit)}
-              className="hover:bg-paper-sunk/60 -mx-3 flex items-center gap-4 px-3 py-3 transition-colors"
-            >
-              <Plate src={posterUrl(credit.poster_path)} size="mini" alt="" />
+      {total > 0 ? (
+        <div className="mt-4">
+          <CreditList credits={group.released.slice(0, PREVIEW_LENGTH)} />
+        </div>
+      ) : (
+        <p className="text-meta text-ink-faint mt-4 italic">No {noun} credited.</p>
+      )}
 
-              <div className="min-w-0 flex-1">
-                <p className="text-body text-ink truncate">{creditTitle(credit)}</p>
-                {credit.character ? (
-                  <p className="text-meta text-ink-faint truncate italic">
-                    {credit.character}
-                  </p>
-                ) : null}
-              </div>
+      <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        {total > PREVIEW_LENGTH ? (
+          <Link href={seeAllHref} className="label text-accent hover:underline">
+            See all {total} {noun} →
+          </Link>
+        ) : (
+          <span />
+        )}
 
-              <span className="label text-ink-faint shrink-0 tabular-nums">
-                {creditYear(credit) ?? "—"}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+        {group.asSelf > 0 ? (
+          <span className="label text-ink-faint">
+            {group.asSelf} appearance{group.asSelf === 1 ? "" : "s"} as themselves, not listed
+          </span>
+        ) : null}
+      </div>
     </section>
   );
 }

@@ -354,27 +354,66 @@ function creditDate(c: CreditItem): string | undefined {
   return c.media_type === "movie" ? c.release_date : c.first_air_date;
 }
 
-export interface Filmography {
+/** One class of a person's work, after self-appearances are set aside. */
+export interface CreditGroup {
   /** Work that exists, newest first. */
   released: CreditItem[];
-  /** Announced but not out yet, soonest first. */
-  upcoming: CreditItem[];
+  /** How many credits were withheld as self-appearances. Reported, never silently dropped. */
+  asSelf: number;
+}
+
+export interface Filmography {
+  films: CreditGroup;
+  series: CreditGroup;
+  /**
+   * Announced work of both kinds, soonest first, kept in one section rather than split
+   * across the two above. It runs to a handful of rows, and giving it its own pair of
+   * headings would spend page structure on the least certain material.
+   */
+  announced: CreditItem[];
 }
 
 /**
- * TMDB returns the same title more than once when someone played several roles in it, and
- * mixes announced-but-unreleased projects into the same array as finished work.
+ * TMDB credits a talk-show appearance exactly as it credits an acting role, and for a
+ * working actor those appearances are most of the television list — 63 of Scarlett
+ * Johansson's 72 series credits, 42 of Bryan Cranston's 107. The one thing that separates
+ * them is the character: appearing as oneself is credited `Self`, `Self - Guest`, `Himself`.
  *
- * **Released and upcoming are separated, and released comes first.** A straight
- * reverse-chronological list is honest but useless: Scarlett Johansson's page opened on five
- * films that do not exist yet, pushing everything she is actually known for below the fold.
- * Rendering a 2028 announcement identically to a 1994 film also quietly implies it exists.
- *
- * Undated credits stay at the end of *released* rather than being treated as upcoming — an
- * undated credit is unknown, not forthcoming — and are ordered by how many people have
- * rated them, since that is the only signal available for them.
+ * **Rejected: also dropping series with fewer than two episodes**, which was the other half
+ * of this rule as originally proposed. Measured against real data it deleted Cranston in
+ * *Babylon 5* and *3rd Rock from the Sun* and Elijah Wood in *Frasier* and *Homicide* — a
+ * one-episode guest role is still a role, and an anthology lead appears exactly once. It
+ * also turned out to be unnecessary: the self test alone takes Johansson's 72 series
+ * credits to 9.
  */
-export function tidyFilmography(credits: CreditItem[]): Filmography {
+function isSelfAppearance(credit: CreditItem): boolean {
+  const character = (credit.character ?? "").trim().toLowerCase();
+  return /^self\b/.test(character) || /^(him|her|them)self\b/.test(character);
+}
+
+/** Newest first, with undated work last — unknown is not the same as forthcoming. */
+function byRecency(credits: CreditItem[]): CreditItem[] {
+  const dated = credits.filter((c) => creditDate(c));
+  const undated = credits.filter((c) => !creditDate(c));
+
+  dated.sort((a, b) => (creditDate(b) ?? "").localeCompare(creditDate(a) ?? ""));
+  // Undated credits have no date to sort on, so rating volume is the only signal available.
+  undated.sort((a, b) => b.vote_count - a.vote_count);
+
+  return [...dated, ...undated];
+}
+
+/**
+ * TMDB returns one flat array holding every kind of credit a person has: films and series
+ * mixed together, announced projects beside finished ones, press appearances beside acting
+ * work, and the same title repeated when someone played more than one part in it.
+ *
+ * **Films and series are separated** because they are different commitments and the app
+ * calls them different things everywhere else. **Released and announced are separated**
+ * because rendering a 2028 announcement identically to a 1994 film quietly implies it
+ * exists — Scarlett Johansson's page used to open on five films that do not.
+ */
+export function filmography(credits: CreditItem[]): Filmography {
   const seen = new Map<string, CreditItem>();
 
   for (const credit of credits) {
@@ -389,23 +428,32 @@ export function tidyFilmography(credits: CreditItem[]): Filmography {
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const all = [...seen.values()];
+  const films: CreditItem[] = [];
+  const series: CreditItem[] = [];
+  const announced: CreditItem[] = [];
+  let filmsAsSelf = 0;
+  let seriesAsSelf = 0;
 
-  const upcoming = all.filter((c) => {
-    const date = creditDate(c);
-    return Boolean(date) && date! > today;
-  });
-  const dated = all.filter((c) => {
-    const date = creditDate(c);
-    return Boolean(date) && date! <= today;
-  });
-  const undated = all.filter((c) => !creditDate(c));
+  for (const credit of seen.values()) {
+    if (isSelfAppearance(credit)) {
+      if (credit.media_type === "movie") filmsAsSelf++;
+      else seriesAsSelf++;
+      continue;
+    }
 
-  dated.sort((a, b) => (creditDate(b) ?? "").localeCompare(creditDate(a) ?? ""));
-  upcoming.sort((a, b) => (creditDate(a) ?? "").localeCompare(creditDate(b) ?? ""));
-  undated.sort((a, b) => b.vote_count - a.vote_count);
+    const date = creditDate(credit);
+    if (date && date > today) announced.push(credit);
+    else if (credit.media_type === "movie") films.push(credit);
+    else series.push(credit);
+  }
 
-  return { released: [...dated, ...undated], upcoming };
+  announced.sort((a, b) => (creditDate(a) ?? "").localeCompare(creditDate(b) ?? ""));
+
+  return {
+    films: { released: byRecency(films), asSelf: filmsAsSelf },
+    series: { released: byRecency(series), asSelf: seriesAsSelf },
+    announced,
+  };
 }
 
 export function lifespan(person: PersonDetail): string | null {
