@@ -1424,4 +1424,68 @@ also has a claim on it: search results are a catalogue, and a catalogue annotate
 **Recorded as superseded, not as forgotten.** The spec item was real and its need was real;
 what changed is that two later decisions served it from a different direction. A scope item
 that quietly disappears from a list is indistinguishable from one nobody got to.
+---
 
+## 56. The empty state is this page with the volume down
+
+**2026-08-12.** With an empty library, the home page renders **itself** — five sections, one
+real row each, at reduced contrast and going nowhere — under a future-tense lead and above the
+offer of an example library.
+
+**This is the third version of this screen and the last two are one argument at two
+strengths.** The first described categories and read as a contents page for a page that was
+not there. #54 replaced each with a worked sentence naming a real title, on the finding that
+**naming a real row shows its shape where a category name only asserts that rows exist.**
+That finding is what produced this: a row shows a row's shape better than a sentence about
+one does. The worked sentences were not wrong — they were prose standing in for a component
+that did not exist yet.
+
+**So the notes went back to the live page's, and there is now one definition of them.** The
+empty state stopped being a separate artifact describing this page and became a copy of it,
+which means a note that differed between the two would be the same section explained two ways.
+
+**Wireframe cards stay rejected (#54) and this is not a quiet reversal of that.** A skeleton
+is a box where content is going to be, and this page spends that convention on something real
+twice over — the digest arrives late and faces later still. **A ghosted row is the opposite
+gesture: it is the content, with nothing behind it.**
+
+**What stops it asserting something false**, which is the whole risk of putting *Breaking Bad*
+in front of somebody whose library is empty, and what #31 and #17 both refuse:
+
+- The lead is future tense — *"will read like this"* — because the present tense claims
+  something about the page in front of the reader that is not true of it.
+- **The rows are not links.** `RowBody` takes `href: string | null` as a *required* prop, so a
+  row cannot be built without stating whether it goes anywhere; `null` renders a `div`. No
+  destination, no hover band, no focus stop. **The honesty is a different element, not styling
+  laid over a link that still works.**
+- Reduced contrast on the block and desaturated plates.
+- The titles are the example library's, so the claim is one the button underneath immediately
+  makes good.
+
+**The specimens live in `example.ts` beside the seeds, and that placement is the decision.** A
+specimen is a promise about what pressing the button produces. Anywhere else, the promise and
+the thing it describes could drift apart without either edit looking wrong; there, they are
+one diff. **Every figure was read from TMDB rather than recalled** — the habit #40 and #43
+exist to enforce, both of which were plausible-looking numbers nobody checked.
+
+**Verified as an invariant rather than by looking**, which is the other half of that lesson:
+zero anchors and zero focusable elements inside the specimen block; every row element a `div`;
+the specimen's innards **identical class-for-class** to the live row (`diff: []`), the only
+difference being the outer element; and all five specimen sentences appearing **verbatim**
+among the real rows after pressing the button, so *"press this and these rows arrive in
+colour"* is checked rather than asserted. **Both invariants were then mutation-tested** (#53):
+giving a specimen an `href` turns the anchor check red, and a bare `tabindex` is caught only
+by the focus check — so the two are not redundant.
+
+**One place the two uses deliberately diverge.** This block also renders when a library *has*
+titles but fills no section. **No specimens there** — ghosted rows naming Breaking Bad on a
+page belonging to somebody with data of their own is the closest this feature can come to
+lying about you. Verified: that path names none of the example titles.
+
+**The cost, measured and not yet paid: the offer moved below the fold.** The specimen block is
+1262px, so *"fill it with an example library"* now sits **2.47 screens down** where the old
+contents list kept it near the top. #45 exists precisely because a reviewer arrives with an
+empty library — an offer they have to scroll to find is a weaker answer to that than one they
+do not. **Open, and the leading fix is to put the offer above the specimen rather than below
+it**, which also reads better: the specimen is *about* the button, and currently it precedes
+the thing it illustrates.
