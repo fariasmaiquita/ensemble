@@ -1326,3 +1326,56 @@ the guard under test, and the second pass caught all sixteen.
 page and noticing a section that should have had a row in it and did not. **Checks confirm the
 rules you thought to write; only running the thing finds the rule you never wrote down.** Both
 were necessary and neither would have done alone.
+
+---
+
+## 54. The empty state shows rather than describes, and two headings stopped hedging
+
+**2026-08-11**, from review. Three changes, all of them to words rather than to logic.
+
+**The section notes are worked sentences now.** They described categories — *"series you are in
+the middle of, and which episode is next"* — and Farias's report was that he felt oriented
+*"to some extent"*, which is the most useful kind of half-complaint. Reading them back, only
+one was concrete: the franchise note, which names two of the four Alien films. **That was the
+only one that landed, and the difference is that naming a real row shows its shape where a
+category name only asserts that rows exist.** All five now read as completions of *"what this
+page will tell you"*, and they use the example library's own titles — so pressing the button
+underneath turns those exact sentences into rows.
+
+**Rejected: wireframe placeholder cards in the shape of the eventual rows**, which is what
+Farias proposed and which does solve the problem directly. Two reasons against, one of them
+decisive.
+
+The decisive one: **this page already spends the skeleton convention on something real.** The
+digest arrives late and the faces request arrives later still, both with visible waiting
+states. A permanent placeholder in the empty state would be a fake of a loading state that
+genuinely happens a few sections away, so a reader would sit waiting for boxes that are never
+going to fill. A fake loading state next to a real one is worse than no shape at all.
+
+The weaker one: grey wireframe rectangles are the most app-like gesture available, and #11
+rejected the poster grid precisely because *browse content* is the wrong signal here.
+
+**Held in reserve rather than dismissed:** if worked sentences turn out not to be enough, the
+next move is one ghosted *real* row per section — the actual layout at reduced contrast — which
+shows shape without borrowing a convention that already means something else.
+
+**Two headings were hedging and now are not.** *Caught up* → **Waiting for more**, because
+"caught up" reads as an instruction as easily as a description. *Partway through* →
+**Partway through a franchise**, because the section never said the noun and the note only
+said "runs".
+
+**Rejected again, on review, and worth recording because the counter-argument was good: two-column
+lists.** #11 and #13 already refuse the grid, and two columns halve the width of the line
+carrying the actual content — *"11 of 62 episodes · next up S2 E5"* is the row, not the poster.
+**But the question found a real defect that neither of us had noticed: no section is capped.**
+Nine example titles hide it; a real library of forty series makes *Continue watching* forty
+rows. The app settled this pattern long ago in #24 — a capped section with its own page behind
+it — and the home page simply does not use it. **Queued rather than bolted on**, because what
+the "and N more" page should be differs per section and deserves its own entry.
+
+**#48's narrowing survived review.** Farias's lean was to widen *Waiting for more* to include
+running series never started, on a genuine symmetry: cancelled-before-you-start warns, and
+still-running-not-started reassures. It was kept narrow because **widening breaks the heading
+that was just fixed** — you are not waiting for more of a series you have had none of — and
+because the reassurance already exists where the decision is actually made, on a series page
+that gives standing the loudest treatment on it (#15).

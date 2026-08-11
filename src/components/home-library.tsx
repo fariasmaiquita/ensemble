@@ -166,7 +166,7 @@ export function HomeLibrary() {
       />
 
       <SeriesSection
-        title="Caught up"
+        title="Waiting for more"
         rows={level}
         note="You have seen everything that has gone out. These are coming back."
       />
@@ -184,7 +184,7 @@ export function HomeLibrary() {
 
       <Unresolved keys={digest.unresolved} entries={library.entries} />
 
-      {nothing ? <Contents lead="Nothing to show yet. What will appear here:" /> : null}
+      {nothing ? <Contents lead="Nothing to show yet. What this page will tell you:" /> : null}
     </div>
   );
 }
@@ -270,7 +270,7 @@ function FranchiseSection({ rows }: { rows: FranchiseRow[] }) {
 
   return (
     <Section
-      title="Partway through"
+      title="Partway through a franchise"
       note="Runs you have started and not finished, counted against what has been released."
     >
       {rows.map((row) => (
@@ -516,26 +516,42 @@ function Waiting() {
 /* The empty library                                                           */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Each note is a worked sentence rather than a description of a category.
+ *
+ * The first version described — *"series you are in the middle of, and which episode is
+ * next"* — and read as a table of contents for a page that was not there. Only the franchise
+ * note was concrete, and it was the only one that landed, because **naming two of the four
+ * Alien films shows the shape of a row where a category name only asserts that rows exist.**
+ *
+ * Rejected on the way here: wireframe placeholder cards in the shape of the eventual rows.
+ * They show the shape directly, and they borrow the one visual convention this page has
+ * already spent — the digest and the faces request both arrive late, so a skeleton here would
+ * be a permanent fake of a loading state that genuinely happens twenty pixels away.
+ *
+ * The titles are the example library's, deliberately: press the button underneath and these
+ * sentences become the rows.
+ */
 const SECTIONS: { title: string; note: string }[] = [
   {
     title: "Continue watching",
-    note: "Series you are in the middle of, and which episode is next.",
+    note: "That you are eleven episodes into Breaking Bad, and that the next one is S2 E5.",
   },
   {
-    title: "Caught up",
-    note: "Series you are level with that are still making more.",
+    title: "Waiting for more",
+    note: "That you are level with Severance, and that it has not finished with you.",
   },
   {
-    title: "Partway through",
-    note: "Franchises you have started — two of the four Alien films, and which one is next.",
+    title: "Partway through a franchise",
+    note: "That you have seen two of the four Alien films, and that Alien³ is the next one.",
   },
   {
     title: "Cancelled before you start",
-    note: "Series in your list that were cut off rather than finished.",
+    note: "That Mindhunter was cut off after two seasons rather than finished.",
   },
   {
     title: "Faces you keep watching",
-    note: "People who turn up across the things you have marked a favourite.",
+    note: "That Bill Paxton turns up in three of the films you have marked a favourite.",
   },
 ];
 
@@ -552,7 +568,7 @@ function Contents({ lead }: { lead?: string }) {
   return (
     <section className={lead ? "mt-12" : "mt-10"}>
       <p className="text-meta text-ink-faint">
-        {lead ?? "What will be here, once you have marked a few things:"}
+        {lead ?? "What this page will tell you, once you have marked a few things:"}
       </p>
       <ul className="mt-5">
         {SECTIONS.map((section) => (
