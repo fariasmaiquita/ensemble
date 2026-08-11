@@ -161,6 +161,84 @@ const SEEDS = [...FILMS, ...SERIES];
 
 export const EXAMPLE_SIZE = { films: FILMS.length, series: SERIES.length };
 
+/* -------------------------------------------------------------------------- */
+/* Specimens                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One row of each section, for the ghosted specimen the empty state shows.
+ *
+ * **They live here, beside the seeds, and that is the point of the file they are in.**
+ * A specimen is a promise about what pressing the button underneath will produce, so a
+ * specimen defined anywhere else is a promise that can drift out of step with the thing
+ * it describes without either edit looking wrong. Here, changing a seed and changing what
+ * the empty state claims about it are the same edit in the same diff.
+ *
+ * **Every figure below was read from TMDB, not recalled**, which is the habit #40 and #43
+ * were both written to enforce: the census vouched for a season that had not finished
+ * airing and the fill invented 197 episode numbers, and in both cases the wrong figure
+ * looked entirely reasonable. Checked 2026-08-12 — Breaking Bad 62 aired across 5 seasons,
+ * Severance 19 across 2 and still returning, Mindhunter 19 across 2 and cancelled, the
+ * Alien collection 4 released with none announced, Bill Paxton in three of the five
+ * favourites.
+ *
+ * The lines are the ones the real row formatters produce for exactly this data —
+ * `progressLine` for the first two, `extentLine` for the cancelled one — so the specimen
+ * is the app's own sentence rather than a description of it.
+ */
+export const SPECIMENS = {
+  /** Seeded S1 1–7 and S2 1–4, which is 11 ticked of 62 and puts the next one at S2 E5. */
+  watching: { ...seed("series", 1396), meta: "11 of 62 episodes · next up S2 E5" },
+
+  /**
+   * Level with everything that has gone out, and it is coming back — which is the whole
+   * reason this section is split off from the one above it (#48).
+   */
+  level: { ...seed("series", 95396), meta: "19 of 19 episodes" },
+
+  cancelled: { ...seed("series", 67744), meta: "Cut off after 2 seasons · 19 episodes" },
+
+  /**
+   * The plate is the *next* film's, not the franchise's, because that is what the real row
+   * shows: a franchise has no poster of its own, and the actionable entry does.
+   */
+  franchise: {
+    name: "Alien",
+    seen: 2,
+    released: 4,
+    next: {
+      title: "Alien³",
+      year: "1992",
+      posterPath: "/xh5wI0UoW7DfS1IyLy3d2CgrCEP.jpg",
+    },
+  },
+
+  /**
+   * Aliens, The Terminator and Titanic are all seeded favourites, which is what makes this
+   * the connection the section exists to find rather than a fact about Bill Paxton.
+   */
+  face: {
+    name: "Bill Paxton",
+    profilePath: "/aLdNe6mt1cSi2zWlUYRregzfis5.jpg",
+    count: 3,
+    appearances: ["The Terminator", "Aliens", "Titanic"],
+  },
+} as const;
+
+/**
+ * The display half of a seed, looked up rather than retyped.
+ *
+ * Throws rather than falling back, because a specimen quietly losing its title is the
+ * failure this co-location exists to prevent — and a build that stops is a cheaper way to
+ * find that out than a row rendering an empty heading in production.
+ */
+function seed(kind: LibraryEntry["kind"], id: number) {
+  const found = SEEDS.find((entry) => entry.kind === kind && entry.id === id);
+  if (!found) throw new Error(`No example seed for ${kind}:${id} to build a specimen from`);
+
+  return { title: found.title, year: found.year, posterPath: found.posterPath };
+}
+
 function build(): Library {
   const entries: Record<string, LibraryEntry> = {};
   const now = Date.now();

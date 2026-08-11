@@ -19,9 +19,47 @@ import {
   partwayFranchises,
 } from "@/lib/home";
 import type { Face } from "@/lib/faces";
-import { EXAMPLE_SIZE, isExample, loadExample, removeExample } from "@/lib/example";
+import {
+  EXAMPLE_SIZE,
+  SPECIMENS,
+  isExample,
+  loadExample,
+  removeExample,
+} from "@/lib/example";
 import { franchiseHref, personHref, seriesHref } from "@/lib/types";
 import { Plate } from "./plate";
+
+/**
+ * What each section is called and what it is for, defined once.
+ *
+ * **One definition because the empty state is now a copy of this page rather than a
+ * description of it.** It used to carry its own worked sentences — *"You are eleven episodes
+ * into Breaking Bad"* — which did a row's job in prose because there was no row to do it.
+ * There is one now, so the note goes back to the job it does up here, and a note that lived
+ * in two places would be a note that could say two different things about one section.
+ */
+const SECTIONS = {
+  watching: {
+    title: "Continue watching",
+    note: "Where you are, counted against what has actually aired.",
+  },
+  level: {
+    title: "Waiting for more",
+    note: "You have seen everything that has gone out. These are coming back.",
+  },
+  franchises: {
+    title: "Partway through a franchise",
+    note: "Runs you have started and not finished, counted against what has been released.",
+  },
+  cancelled: {
+    title: "Cancelled before you start",
+    note: "Cut off rather than finished — worth knowing before you begin.",
+  },
+  faces: {
+    title: "Faces you keep watching",
+    note: "People who appear in more than one of your favourites.",
+  },
+} as const;
 
 /**
  * The home page's library half.
@@ -159,33 +197,30 @@ export function HomeLibrary() {
         it landed; and someone opening a tracker is trying to resume something, not to be
         told what their taste looks like.
       */}
-      <SeriesSection
-        title="Continue watching"
-        rows={watching}
-        note="Where you are, counted against what has actually aired."
-      />
+      <SeriesSection section={SECTIONS.watching} rows={watching} />
 
-      <SeriesSection
-        title="Waiting for more"
-        rows={level}
-        note="You have seen everything that has gone out. These are coming back."
-      />
+      <SeriesSection section={SECTIONS.level} rows={level} />
 
       <FranchiseSection rows={franchises} />
 
-      <SeriesSection
-        title="Cancelled before you start"
-        rows={cancelled}
-        note="Cut off rather than finished — worth knowing before you begin."
-        line={extentLine}
-      />
+      <SeriesSection section={SECTIONS.cancelled} rows={cancelled} line={extentLine} />
 
       <FacesSection faces={faces} entries={library.entries} />
 
       <Unresolved keys={digest.unresolved} entries={library.entries} />
 
+      {/*
+        No specimens here, deliberately, and it is the one place the two uses of this block
+        diverge. A library with titles in it that fills no section is not an empty library —
+        ghosted rows naming Breaking Bad would be sitting on a page belonging to someone with
+        data of their own, which is the closest this feature can come to asserting something
+        false about you (#31, #17). The headings and their notes still explain the page.
+      */}
       {nothing ? (
-        <Contents lead="Nothing to show yet. With a few things marked, it will read like this:" />
+        <Contents
+          lead="Nothing to show yet. With a few things marked, it will read like this:"
+          specimens={false}
+        />
       ) : null}
     </div>
   );
@@ -196,14 +231,12 @@ export function HomeLibrary() {
 /* -------------------------------------------------------------------------- */
 
 function SeriesSection({
-  title,
+  section,
   rows,
-  note,
   line = progressLine,
 }: {
-  title: string;
+  section: { title: string; note: string };
   rows: SeriesRow[];
-  note: string;
   /**
    * What a row says about itself, which is not the same question in every section.
    *
@@ -220,11 +253,13 @@ function SeriesSection({
   if (rows.length === 0) return null;
 
   return (
-    <Section title={title} note={note}>
+    <Section {...section}>
       {rows.map((row) => (
         <TitleRow
           key={row.entry.id}
-          entry={row.entry}
+          title={row.entry.title}
+          year={row.entry.year}
+          posterPath={row.entry.posterPath}
           href={seriesHref(row.entry.id, row.entry.title)}
           meta={line(row)}
         />
@@ -271,56 +306,75 @@ function FranchiseSection({ rows }: { rows: FranchiseRow[] }) {
   if (rows.length === 0) return null;
 
   return (
-    <Section
-      title="Partway through a franchise"
-      note="Runs you have started and not finished, counted against what has been released."
-    >
+    <Section {...SECTIONS.franchises}>
       {rows.map((row) => (
-        <li key={row.franchise.id} className="border-rule border-t">
-          <Link
-            href={franchiseHref(row.franchise.id, row.franchise.name)}
-            className="hover:bg-paper-sunk/60 -mx-3 flex gap-5 px-3 py-6 transition-colors"
-          >
-            <Plate
-              src={posterUrl(row.next?.posterPath ?? null)}
-              alt={row.next?.title ?? ""}
-            />
-
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-4">
-                <h3 className="editorial text-title text-ink text-balance">
-                  {franchiseLabel(row.franchise.name)}
-                </h3>
-                <span className="label text-ink-faint shrink-0 tabular-nums">
-                  {row.seen} of {row.released}
-                </span>
-              </div>
-
-              {row.next ? (
-                <p className="text-meta text-ink-muted mt-2">
-                  Next: <span className="text-ink">{row.next.title}</span>
-                  {row.next.year ? ` (${row.next.year})` : ""}
-                </p>
-              ) : null}
-
-              {/*
-                Announced entries are named rather than folded into the denominator. Counting
-                them would make the run permanently unfinishable — two Avatar sequels that do
-                not exist yet would hold you at "3 of 5" forever, which is the same false
-                statement #17 refuses when it declines to render an announcement like a film.
-              */}
-              {row.announced > 0 ? (
-                <p className="text-meta text-ink-faint mt-1">
-                  {row.announced === 1
-                    ? "One more announced, not yet released"
-                    : `${row.announced} more announced, not yet released`}
-                </p>
-              ) : null}
-            </div>
-          </Link>
-        </li>
+        <FranchiseRowItem
+          key={row.franchise.id}
+          name={row.franchise.name}
+          seen={row.seen}
+          released={row.released}
+          announced={row.announced}
+          next={row.next}
+          href={franchiseHref(row.franchise.id, row.franchise.name)}
+        />
       ))}
     </Section>
+  );
+}
+
+function FranchiseRowItem({
+  name,
+  seen,
+  released,
+  announced = 0,
+  next,
+  href,
+}: {
+  name: string;
+  seen: number;
+  released: number;
+  announced?: number;
+  next: { title: string; year: string | null; posterPath: string | null } | null;
+  href: string | null;
+}) {
+  return (
+    <li className="border-rule border-t">
+      <RowBody href={href} className="flex gap-5 py-6">
+        <Plate src={posterUrl(next?.posterPath ?? null)} alt={next?.title ?? ""} />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-4">
+            <h3 className="editorial text-title text-ink text-balance">
+              {franchiseLabel(name)}
+            </h3>
+            <span className="label text-ink-faint shrink-0 tabular-nums">
+              {seen} of {released}
+            </span>
+          </div>
+
+          {next ? (
+            <p className="text-meta text-ink-muted mt-2">
+              Next: <span className="text-ink">{next.title}</span>
+              {next.year ? ` (${next.year})` : ""}
+            </p>
+          ) : null}
+
+          {/*
+            Announced entries are named rather than folded into the denominator. Counting
+            them would make the run permanently unfinishable — two Avatar sequels that do
+            not exist yet would hold you at "3 of 5" forever, which is the same false
+            statement #17 refuses when it declines to render an announcement like a film.
+          */}
+          {announced > 0 ? (
+            <p className="text-meta text-ink-faint mt-1">
+              {announced === 1
+                ? "One more announced, not yet released"
+                : `${announced} more announced, not yet released`}
+            </p>
+          ) : null}
+        </div>
+      </RowBody>
+    </li>
   );
 }
 
@@ -348,7 +402,7 @@ function FacesSection({
    */
   if (faces === null) {
     return (
-      <Section title="Faces you keep watching" note="">
+      <Section title={SECTIONS.faces.title} note="">
         <li className="text-meta text-ink-faint border-rule border-t py-6 italic">
           Reading the cast of every film and series you have marked a favourite…
         </li>
@@ -359,10 +413,7 @@ function FacesSection({
   if (faces.length === 0) return null;
 
   return (
-    <Section
-      title="Faces you keep watching"
-      note="People who appear in more than one of your favourites."
-    >
+    <Section {...SECTIONS.faces}>
       {faces.map((face) => {
         /*
          * Oldest first, resolved against the library rather than sent down with the faces.
@@ -378,27 +429,47 @@ function FacesSection({
           .map((entry) => entry.title);
 
         return (
-          <li key={face.id} className="border-rule border-t">
-            <Link
-              href={personHref(face.id, face.name)}
-              className="hover:bg-paper-sunk/60 -mx-3 flex items-center gap-4 px-3 py-4 transition-colors"
-            >
-              <Plate src={profileUrl(face.profilePath)} size="mini" align="center" />
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-4">
-                  <h3 className="editorial text-subtitle text-ink">{face.name}</h3>
-                  <span className="label text-ink-faint shrink-0 tabular-nums">
-                    {face.titles.length}
-                  </span>
-                </div>
-                <p className="text-meta text-ink-muted mt-0.5">{appearances.join(" · ")}</p>
-              </div>
-            </Link>
-          </li>
+          <FaceRowItem
+            key={face.id}
+            name={face.name}
+            profilePath={face.profilePath}
+            count={face.titles.length}
+            appearances={appearances}
+            href={personHref(face.id, face.name)}
+          />
         );
       })}
     </Section>
+  );
+}
+
+function FaceRowItem({
+  name,
+  profilePath,
+  count,
+  appearances,
+  href,
+}: {
+  name: string;
+  profilePath: string | null;
+  count: number;
+  appearances: readonly string[];
+  href: string | null;
+}) {
+  return (
+    <li className="border-rule border-t">
+      <RowBody href={href} className="flex items-center gap-4 py-4">
+        <Plate src={profileUrl(profilePath)} size="mini" align="center" />
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-4">
+            <h3 className="editorial text-subtitle text-ink">{name}</h3>
+            <span className="label text-ink-faint shrink-0 tabular-nums">{count}</span>
+          </div>
+          <p className="text-meta text-ink-muted mt-0.5">{appearances.join(" · ")}</p>
+        </div>
+      </RowBody>
+    </li>
   );
 }
 
@@ -464,35 +535,71 @@ function Section({
   );
 }
 
+/**
+ * The inside of a row, which is a link when the row is one and a plain box when it is not.
+ *
+ * **`href: string | null` is a required prop rather than an optional one, and that is the
+ * whole safety of the ghosting.** A row cannot be built without stating whether it goes
+ * somewhere, so there is no way to write a specimen that quietly keeps its destination or a
+ * real row that quietly loses it. Everything else about a ghost — that it does not highlight
+ * under the cursor, does not take focus, does not answer a click — falls out of the element
+ * being a `div`, rather than out of styling laid on top of a link that still works.
+ *
+ * The three row shapes on this page share this and nothing else. They are deliberately not
+ * one component: a franchise counts parts, a face counts appearances, a series names an
+ * episode, and the layouts differ. What they must never differ on is whether the specimen
+ * of a row is still the row, so the *shells* are shared and each caller keeps its own body.
+ */
+function RowBody({
+  href,
+  className,
+  children,
+}: {
+  href: string | null;
+  className: string;
+  children: React.ReactNode;
+}) {
+  // Bleeding into the gutter so the hover band is wider than the text, and kept on the
+  // ghost too — otherwise the specimen would sit at a different indent from the real row.
+  const shared = `-mx-3 px-3 ${className}`;
+
+  if (href === null) return <div className={shared}>{children}</div>;
+
+  return (
+    <Link href={href} className={`${shared} hover:bg-paper-sunk/60 transition-colors`}>
+      {children}
+    </Link>
+  );
+}
+
 function TitleRow({
-  entry,
+  title,
+  year,
+  posterPath,
   href,
   meta,
 }: {
-  entry: LibraryEntry;
-  href: string;
+  title: string;
+  year: string | null;
+  posterPath: string | null;
+  href: string | null;
   meta: string;
 }) {
   return (
     <li className="border-rule border-t">
-      <Link
-        href={href}
-        className="hover:bg-paper-sunk/60 -mx-3 flex gap-5 px-3 py-6 transition-colors"
-      >
-        <Plate src={posterUrl(entry.posterPath)} alt={entry.title} />
+      <RowBody href={href} className="flex gap-5 py-6">
+        <Plate src={posterUrl(posterPath)} alt={title} />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-4">
-            <h3 className="editorial text-title text-ink text-balance">{entry.title}</h3>
-            {entry.year ? (
-              <span className="label text-ink-faint shrink-0 tabular-nums">
-                {entry.year}
-              </span>
+            <h3 className="editorial text-title text-ink text-balance">{title}</h3>
+            {year ? (
+              <span className="label text-ink-faint shrink-0 tabular-nums">{year}</span>
             ) : null}
           </div>
           <p className="text-meta text-ink-muted mt-2">{meta}</p>
         </div>
-      </Link>
+      </RowBody>
     </li>
   );
 }
@@ -519,79 +626,99 @@ function Waiting() {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Each note is a worked sentence rather than a description of a category.
+ * The empty state, which is this page with the volume down.
  *
- * The first version described — *"series you are in the middle of, and which episode is
- * next"* — and read as a table of contents for a page that was not there. Only the franchise
- * note was concrete, and it was the only one that landed, because **naming two of the four
- * Alien films shows the shape of a row where a category name only asserts that rows exist.**
+ * Every section here is computed from your own data, so a first visit has nothing to render —
+ * by choice, since the obvious filler is a trending row and that is the one thing this page
+ * refuses to be (#44). What it shows instead is **the page itself, one row per section, at
+ * reduced contrast and going nowhere.**
  *
- * Rejected on the way here: wireframe placeholder cards in the shape of the eventual rows.
- * They show the shape directly, and they borrow the one visual convention this page has
- * already spent — the digest and the faces request both arrive late, so a skeleton here would
- * be a permanent fake of a loading state that genuinely happens twenty pixels away.
+ * **Three versions got here, and the last two are the same argument at different strengths.**
+ * The first described categories — *"series you are in the middle of, and which episode is
+ * next"* — and read as a table of contents for a page that was not there. The second replaced
+ * each with a worked sentence naming a real title — *"You are eleven episodes into Breaking
+ * Bad, and the next one is S2 E5"* — on the finding that **naming a real row shows its shape
+ * where a category name only asserts that rows exist**. That finding is why this version
+ * exists: a row shows its shape better than a sentence about a row does, so the prose can go
+ * back to explaining what the section is *for*, which is what it does twenty pixels up on the
+ * live page. The worked sentences were not wrong; they were prose standing in for a component.
  *
- * The titles are the example library's, deliberately: press the button underneath and these
- * sentences become the rows.
+ * **Wireframe placeholder cards were rejected and still are.** They show shape too, and they
+ * borrow the one visual convention this page has already spent: the digest arrives late and
+ * faces later still, both with real waiting states, so a permanent skeleton here would be a
+ * fake of a loading state that genuinely happens a section away. A ghosted row is the
+ * opposite of a skeleton — a skeleton is a box where content will be, and this is the content
+ * with nothing behind it.
  *
- * **They are plain declaratives rather than completions of the lead.** The first version read
- * *"That you are eleven episodes into Breaking Bad"*, each note finishing a sentence the lead
- * had started — grammatical, and mannered enough that it was the construction you noticed
- * instead of the content. The lead now frames them as a specimen (*"reads like this"*), which
- * costs one word and lets every note stand up on its own.
+ * **What stops it asserting something false**, which is the whole risk of putting a real
+ * title on a library that has none, and what #31 and #17 both refuse:
  *
- * **Future tense, deliberately.** "This page reads like this" asserts something presently
- * false about the page in front of the reader — it does not read like that, which is the
- * whole reason they are seeing this screen. The same refusal to state an unknown as a fact
- * that #31 makes about the controls and #17 makes about unreleased work.
+ * - The lead is future tense — *"will read like this"* — because the present tense would
+ *   claim something about the page the reader is looking at that is not true of it.
+ * - **The rows are not links.** No destination, no hover band, no focus stop, no cursor. A
+ *   row you cannot click is materially a different object from every other row in the app.
+ * - Reduced contrast, and the plates desaturated, so nothing here competes with a live row.
+ * - The titles are the example library's, so the claim the block is making is one the button
+ *   underneath immediately makes good: press it and these exact rows arrive in colour.
  */
-const SECTIONS: { title: string; note: string }[] = [
-  {
-    title: "Continue watching",
-    note: "You are eleven episodes into Breaking Bad, and the next one is S2 E5.",
-  },
-  {
-    title: "Waiting for more",
-    note: "You are level with Severance, and there is more of it coming.",
-  },
-  {
-    title: "Partway through a franchise",
-    note: "You have seen two of the four Alien films, and Alien³ is next.",
-  },
-  {
-    title: "Cancelled before you start",
-    note: "Mindhunter was cut off after two seasons rather than finished.",
-  },
-  {
-    title: "Faces you keep watching",
-    note: "Bill Paxton is in three of your favourites.",
-  },
-];
-
-/**
- * The empty state, which is a contents page.
- *
- * Every section on this page is computed from your own data, so a first visit has nothing to
- * render — and that is by choice, since the obvious filler is a trending row, which is the
- * one thing this page refuses to be. Listing the sections and what fills each of them says
- * more about the app than a grid of this week's releases would, and it is honest about the
- * fact that the app has not met you yet.
- */
-function Contents({ lead }: { lead?: string }) {
+function Contents({ lead, specimens }: { lead?: string; specimens: boolean }) {
   return (
     <section className={lead ? "mt-12" : "mt-10"}>
       <p className="text-meta text-ink-faint">
         {lead ?? "Once you have marked a few things, this page will read like this:"}
       </p>
-      <ul className="mt-5">
-        {SECTIONS.map((section) => (
-          <li key={section.title} className="border-rule border-t py-4">
-            <h2 className="label text-ink-muted">{section.title}</h2>
-            <p className="text-meta text-ink-faint mt-1 max-w-md">{section.note}</p>
-          </li>
-        ))}
-      </ul>
+
+      {specimens ? <Specimens /> : <Headings />}
     </section>
+  );
+}
+
+/**
+ * The dimming, applied to the block rather than threaded through every row.
+ *
+ * `opacity` on the container is what makes this cheap enough to be honest: the rows below are
+ * the *same components* the live page renders, so there is no second set of muted colour
+ * tokens to keep in step and no way for a specimen to drift into looking live. `grayscale` is
+ * aimed at the images only — running it over the text would turn a warm near-black ink cold,
+ * which is a palette the rest of the app does not contain.
+ */
+function Specimens() {
+  return (
+    <div className="mt-8 opacity-55 [&_img]:grayscale">
+      <Section {...SECTIONS.watching}>
+        <TitleRow {...SPECIMENS.watching} href={null} />
+      </Section>
+
+      <Section {...SECTIONS.level}>
+        <TitleRow {...SPECIMENS.level} href={null} />
+      </Section>
+
+      <Section {...SECTIONS.franchises}>
+        <FranchiseRowItem {...SPECIMENS.franchise} href={null} />
+      </Section>
+
+      <Section {...SECTIONS.cancelled}>
+        <TitleRow {...SPECIMENS.cancelled} href={null} />
+      </Section>
+
+      <Section {...SECTIONS.faces}>
+        <FaceRowItem {...SPECIMENS.face} href={null} />
+      </Section>
+    </div>
+  );
+}
+
+/** The same contents without the rows — see the comment at the second call site. */
+function Headings() {
+  return (
+    <ul className="mt-5">
+      {Object.values(SECTIONS).map((section) => (
+        <li key={section.title} className="border-rule border-t py-4">
+          <h2 className="label text-ink-muted">{section.title}</h2>
+          <p className="text-meta text-ink-faint mt-1 max-w-md">{section.note}</p>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -599,7 +726,7 @@ function EmptyLibrary() {
   return (
     <>
       <Premise />
-      <Contents />
+      <Contents specimens />
 
       {/*
         The example writes into the real store rather than into a preview mode, so every
