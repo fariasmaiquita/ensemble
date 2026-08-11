@@ -1338,9 +1338,17 @@ the middle of, and which episode is next"* — and Farias's report was that he f
 *"to some extent"*, which is the most useful kind of half-complaint. Reading them back, only
 one was concrete: the franchise note, which names two of the four Alien films. **That was the
 only one that landed, and the difference is that naming a real row shows its shape where a
-category name only asserts that rows exist.** All five now read as completions of *"what this
-page will tell you"*, and they use the example library's own titles — so pressing the button
-underneath turns those exact sentences into rows.
+category name only asserts that rows exist.** All five are concrete now, and they use the
+example library's own titles — so pressing the button underneath turns those exact sentences
+into rows.
+
+**Revised once more on a second read, and the reason is worth keeping.** The first concrete
+version made each note a *completion* of the lead — *"what this page will tell you: **that**
+you are eleven episodes into Breaking Bad"*. It was grammatical and it was the construction
+you noticed rather than the content, which for copy whose entire job is orientation is a
+straightforward failure. The lead now frames them as a specimen — *"once you have marked a few
+things, this page reads like this"* — which costs one word and lets every note be a plain
+declarative sentence. **The concreteness was never the problem; the sentence shape was.**
 
 **Rejected: wireframe placeholder cards in the shape of the eventual rows**, which is what
 Farias proposed and which does solve the problem directly. Two reasons against, one of them

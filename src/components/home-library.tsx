@@ -184,7 +184,9 @@ export function HomeLibrary() {
 
       <Unresolved keys={digest.unresolved} entries={library.entries} />
 
-      {nothing ? <Contents lead="Nothing to show yet. What this page will tell you:" /> : null}
+      {nothing ? (
+        <Contents lead="Nothing to show yet. With a few things marked, it reads like this:" />
+      ) : null}
     </div>
   );
 }
@@ -531,27 +533,33 @@ function Waiting() {
  *
  * The titles are the example library's, deliberately: press the button underneath and these
  * sentences become the rows.
+ *
+ * **They are plain declaratives rather than completions of the lead.** The first version read
+ * *"That you are eleven episodes into Breaking Bad"*, each note finishing a sentence the lead
+ * had started — grammatical, and mannered enough that it was the construction you noticed
+ * instead of the content. The lead now frames them as a specimen (*"reads like this"*), which
+ * costs one word and lets every note stand up on its own.
  */
 const SECTIONS: { title: string; note: string }[] = [
   {
     title: "Continue watching",
-    note: "That you are eleven episodes into Breaking Bad, and that the next one is S2 E5.",
+    note: "You are eleven episodes into Breaking Bad, and the next one is S2 E5.",
   },
   {
     title: "Waiting for more",
-    note: "That you are level with Severance, and that it has not finished with you.",
+    note: "You are level with Severance, and there is more of it coming.",
   },
   {
     title: "Partway through a franchise",
-    note: "That you have seen two of the four Alien films, and that Alien³ is the next one.",
+    note: "You have seen two of the four Alien films, and Alien³ is next.",
   },
   {
     title: "Cancelled before you start",
-    note: "That Mindhunter was cut off after two seasons rather than finished.",
+    note: "Mindhunter was cut off after two seasons rather than finished.",
   },
   {
     title: "Faces you keep watching",
-    note: "That Bill Paxton turns up in three of the films you have marked a favourite.",
+    note: "Bill Paxton is in three of your favourites.",
   },
 ];
 
@@ -568,7 +576,7 @@ function Contents({ lead }: { lead?: string }) {
   return (
     <section className={lead ? "mt-12" : "mt-10"}>
       <p className="text-meta text-ink-faint">
-        {lead ?? "What this page will tell you, once you have marked a few things:"}
+        {lead ?? "Once you have marked a few things, this page reads like this:"}
       </p>
       <ul className="mt-5">
         {SECTIONS.map((section) => (
