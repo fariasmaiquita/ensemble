@@ -1347,7 +1347,8 @@ version made each note a *completion* of the lead — *"what this page will tell
 you are eleven episodes into Breaking Bad"*. It was grammatical and it was the construction
 you noticed rather than the content, which for copy whose entire job is orientation is a
 straightforward failure. The lead now frames them as a specimen — *"once you have marked a few
-things, this page reads like this"* — which costs one word and lets every note be a plain
+things, this page **will** read like this"* — future tense, because the present tense asserts
+something presently false about the page the reader is looking at — which costs one word and lets every note be a plain
 declarative sentence. **The concreteness was never the problem; the sentence shape was.**
 
 **Rejected: wireframe placeholder cards in the shape of the eventual rows**, which is what

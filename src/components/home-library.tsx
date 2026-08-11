@@ -185,7 +185,7 @@ export function HomeLibrary() {
       <Unresolved keys={digest.unresolved} entries={library.entries} />
 
       {nothing ? (
-        <Contents lead="Nothing to show yet. With a few things marked, it reads like this:" />
+        <Contents lead="Nothing to show yet. With a few things marked, it will read like this:" />
       ) : null}
     </div>
   );
@@ -539,6 +539,11 @@ function Waiting() {
  * had started — grammatical, and mannered enough that it was the construction you noticed
  * instead of the content. The lead now frames them as a specimen (*"reads like this"*), which
  * costs one word and lets every note stand up on its own.
+ *
+ * **Future tense, deliberately.** "This page reads like this" asserts something presently
+ * false about the page in front of the reader — it does not read like that, which is the
+ * whole reason they are seeing this screen. The same refusal to state an unknown as a fact
+ * that #31 makes about the controls and #17 makes about unreleased work.
  */
 const SECTIONS: { title: string; note: string }[] = [
   {
@@ -576,7 +581,7 @@ function Contents({ lead }: { lead?: string }) {
   return (
     <section className={lead ? "mt-12" : "mt-10"}>
       <p className="text-meta text-ink-faint">
-        {lead ?? "Once you have marked a few things, this page reads like this:"}
+        {lead ?? "Once you have marked a few things, this page will read like this:"}
       </p>
       <ul className="mt-5">
         {SECTIONS.map((section) => (
