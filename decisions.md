@@ -1388,3 +1388,40 @@ still-running-not-started reassures. It was kept narrow because **widening break
 that was just fixed** — you are not waiting for more of a series you have had none of — and
 because the reassurance already exists where the decision is actually made, on a series page
 that gives standing the loudest treatment on it (#15).
+
+---
+
+## 55. The cancelled filter was cut, and what replaced it is louder than it was
+
+**2026-08-12.** The original spec carried two differentiators. The first was franchise view.
+The second was **"no way to filter out TV series that have been cancelled"** — a browse-time
+control, listed in scope as *status-aware TV filtering*. **It is struck rather than built.**
+
+**What answers the need instead, and answers it better.** #15 gives a cancelled series the
+only rust on its page. #50 gives the home page a section that names cancelled series you have
+not started, and `extentLine` deliberately tells you *how much there is* rather than offering
+you episode one. The question behind the spec item — *am I about to start something that was
+cut off?* — is now answered twice, at both moments it gets asked.
+
+**The decisive argument is that a filter deletes the app's best sentence.** #15's whole claim
+is that *Ended* and *Cancelled* are three letters apart in a database and worlds apart to
+somebody weighing thirty hours. A control that removes cancelled series from a result list
+spends that distinction on hiding rows. **Telling is strictly more informative than hiding,
+and this app's position is that it tells you things.**
+
+**It also could not be built cheaply, which is worth recording since it is not the reason.**
+`/search/multi` returns no `status` for series, so filtering — or even *marking* — a result
+list means one `/tv/{id}` per row, turning a twenty-result search into twenty-one requests.
+That is what #18 rules out. But the request cost is a second argument, not the first: if the
+filter were the right feature it would be worth the requests.
+
+**Rejected, and it is the version with real value, so it is named rather than folded away: a
+cancelled *marker* on search rows.** Not a filter — the standing shown in the result list, so
+you see it before you click. It is a better idea than the filter and it carries the identical
+N-request cost, which is why it is not being built now rather than not being built ever. #13
+also has a claim on it: search results are a catalogue, and a catalogue annotates.
+
+**Recorded as superseded, not as forgotten.** The spec item was real and its need was real;
+what changed is that two later decisions served it from a different direction. A scope item
+that quietly disappears from a list is indistinguishable from one nobody got to.
+
